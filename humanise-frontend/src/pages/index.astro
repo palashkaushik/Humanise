@@ -1,0 +1,166 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+  <main class="max-w-3xl mx-auto px-4 py-12">
+    <header class="text-center mb-10">
+      <h1 class="text-4xl font-bold mb-2">Humanise</h1>
+      <p class="text-zinc-400 text-lg">Free, open-source AI text humanization</p>
+      <p class="text-zinc-600 text-sm mt-1">Powered by Gemini & Groq — 1,500+ requests/day free</p>
+    </header>
+
+    <!-- Tabs -->
+    <div class="flex gap-0 mb-0">
+      <button id="tab-humanize-btn" class="tab-btn px-5 py-2.5 rounded-t-lg border border-b-0 border-zinc-800 bg-zinc-900 text-zinc-200 text-sm font-medium" data-tab="humanize">Humanize</button>
+      <button id="tab-detect-btn" class="tab-btn px-5 py-2.5 rounded-t-lg border border-b-0 border-transparent text-zinc-500 text-sm font-medium" data-tab="detect">Detect</button>
+    </div>
+
+    <!-- Humanize tab -->
+    <div id="panel-humanize" class="border border-zinc-800 rounded-b-lg rounded-tr-lg bg-zinc-900 p-6 space-y-4">
+      <textarea id="inputText" rows="8" placeholder="Paste AI-generated text here..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-zinc-200 placeholder:text-zinc-600 resize-y text-sm focus:outline-none focus:border-zinc-600"></textarea>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <select id="strength" class="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none">
+          <option value="medium">Medium</option>
+          <option value="light">Light</option>
+          <option value="aggressive">Aggressive</option>
+          <option value="ninja">Ninja</option>
+        </select>
+        <label class="flex items-center gap-2 text-sm text-zinc-400 cursor-pointer">
+          <input type="checkbox" id="feedback" class="rounded border-zinc-700 bg-zinc-800" />
+          Feedback loop
+        </label>
+        <button id="humanizeBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+          Humanize
+        </button>
+        <button id="rulesBtn" class="border border-zinc-700 hover:border-zinc-500 text-zinc-300 px-4 py-2 rounded-lg text-sm transition-colors">
+          Rules only (instant)
+        </button>
+      </div>
+
+      <div id="spinner" class="hidden text-center py-4 text-zinc-500 text-sm">Rewriting&hellip;</div>
+      <div id="output" class="hidden bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-sm whitespace-pre-wrap"></div>
+    </div>
+
+    <!-- Detect tab -->
+    <div id="panel-detect" class="hidden border border-zinc-800 rounded-b-lg rounded-tr-lg bg-zinc-900 p-6 space-y-4">
+      <textarea id="detectText" rows="6" placeholder="Paste text to analyze..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-zinc-200 placeholder:text-zinc-600 resize-y text-sm focus:outline-none focus:border-zinc-600"></textarea>
+      <button id="detectBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+        Analyze
+      </button>
+      <div id="detectResults"></div>
+    </div>
+
+    <footer class="text-center text-zinc-700 text-xs mt-10">
+      API: <a href="/api/humanize" class="text-zinc-500 hover:text-zinc-300 underline">/api/humanize</a> &middot;
+      <a href="/api/detect" class="text-zinc-500 hover:text-zinc-300 underline">/api/detect</a> &middot;
+      <a href="/api/rules" class="text-zinc-500 hover:text-zinc-300 underline">/api/rules</a>
+    </footer>
+  </main>
+</Layout>
+
+<script>
+const API = '';
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('bg-zinc-900', 'text-zinc-200', 'border-zinc-800');
+      b.classList.add('border-transparent', 'text-zinc-500');
+    });
+    btn.classList.add('bg-zinc-900', 'text-zinc-200', 'border-zinc-800');
+    btn.classList.remove('border-transparent', 'text-zinc-500');
+    const tab = btn.dataset.tab;
+    document.getElementById('panel-humanize').classList.toggle('hidden', tab !== 'humanize');
+    document.getElementById('panel-detect').classList.toggle('hidden', tab !== 'detect');
+  });
+});
+
+// Humanize
+document.getElementById('humanizeBtn').addEventListener('click', async () => {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) return;
+  const spinner = document.getElementById('spinner');
+  const output = document.getElementById('output');
+  spinner.classList.remove('hidden');
+  output.classList.add('hidden');
+  try {
+    const r = await fetch(`${API}/api/humanize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        strength: document.getElementById('strength').value,
+        feedback: document.getElementById('feedback').checked,
+      }),
+    });
+    const d = await r.json();
+    output.textContent = d.text || d.detail || 'Error';
+  } catch (e) {
+    output.textContent = 'Error: ' + e.message;
+  }
+  spinner.classList.add('hidden');
+  output.classList.remove('hidden');
+});
+
+// Rules only
+document.getElementById('rulesBtn').addEventListener('click', async () => {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) return;
+  const output = document.getElementById('output');
+  output.classList.remove('hidden');
+  output.textContent = 'Processing...';
+  try {
+    const r = await fetch(`${API}/api/rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const d = await r.json();
+    output.textContent = d.text || d.detail;
+  } catch (e) {
+    output.textContent = 'Error: ' + e.message;
+  }
+});
+
+// Detect
+document.getElementById('detectBtn').addEventListener('click', async () => {
+  const text = document.getElementById('detectText').value.trim();
+  if (!text) return;
+  const results = document.getElementById('detectResults');
+  results.innerHTML = '<p class="text-zinc-500 text-sm py-4">Analyzing...</p>';
+  try {
+    const r = await fetch(`${API}/api/detect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const d = await r.json();
+    const cls = d.total_score > 60 ? 'text-red-400' : d.total_score > 30 ? 'text-yellow-400' : 'text-emerald-400';
+    let html = `
+      <div class="text-center py-4">
+        <div class="text-5xl font-bold ${cls}">${d.total_score}</div>
+        <div class="text-zinc-500 text-sm mt-1">AI-likeness score</div>
+      </div>
+      <div class="flex justify-center gap-8 mb-4 text-sm">
+        <div class="text-center"><span class="text-lg font-semibold">${d.pattern_count}</span><br><span class="text-zinc-500">patterns</span></div>
+        <div class="text-center"><span class="text-lg font-semibold">${d.sentence_uniformity.toFixed(2)}</span><br><span class="text-zinc-500">uniformity</span></div>
+      </div>`;
+    if (Object.keys(d.matches).length) {
+      html += '<div class="space-y-1">';
+      for (const [k, v] of Object.entries(d.matches)) {
+        html += `<div class="flex justify-between text-sm border border-zinc-800 rounded p-2"><span class="text-zinc-400">${k.replace(/_/g, ' ')}</span><span class="text-zinc-300">${v}</span></div>`;
+      }
+      html += '</div>';
+    }
+    if (d.concerns.length) {
+      html += '<div class="mt-3 space-y-1">' + d.concerns.map(c => `<div class="text-sm text-yellow-400 border border-yellow-900 rounded p-2">${c}</div>`).join('') + '</div>';
+    }
+    results.innerHTML = html;
+  } catch (e) {
+    results.innerHTML = '<p class="text-red-400 text-sm">Error: ' + e.message + '</p>';
+  }
+});
+</script>
