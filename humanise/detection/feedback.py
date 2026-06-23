@@ -20,7 +20,18 @@ AI_PATTERNS = {
     "robust_seamless": r"\b(robust|seamless)\s+(solution|integration|platform|system|approach|framework|workflow|experience|interface)\b",
     "multi_faceted": r"\bmulti[\s-]facet(ed)?\b",
     "harnessing_powering": r"\b(harness(ing)?|leverag(ing|e))\s+(the\s+)?power\b",
-    "elevate_transform": r"\b(elevat(e|ing)\s+your|transform(ing)?\s+the\s+(way|landscape))\b",
+    "navigate_complex": r"\b(navigat(e|ing|ed)\s+(the\s+)?(complex|intricate|challenging)|steer\s+through|find\s+(one's|their)\s+way)\b",
+    "beacon_of": r"\bbeacon\s+of\s+(hope|light|resilience|inspiration|change)\b",
+    "tapestry_of": r"\b(tapestry|kaleidoscope|microcosm|melting\s+pot)\s+of\b",
+    "journey_of": r"\bjourney\s+of\s+(self[\s-]?discovery|transformation|growth|healing|redemption)\b",
+    "dance_of": r"\b(dance|delicate\s+dance|intricate\s+dance)\s+of\s+(light|shadow|life|fate|destiny)\b",
+    "eyes_flashed": r"\b(eyes\s+(flashed|sparkled|lit\s+up|narrowed|widened)|smile\s+faltered|face\s+(lit\s+up|fell|dropped)|jaw\s+(clenched|tightened|dropped))\b",
+    "heart_pounded": r"\b(heart\s+(pounded|raced|skipped|sank|swelled|soared|hammered|thudded)|chest\s+tightened|gut\s+(twisted|clenched|churned)|pulse\s+(quickened|raced))\b",
+    "drowning_in": r"\b(drown(ing|ed)\s+in\s+(their|her|his|its|the)|lost\s+in\s+(their|her|his|its|the)\s+(eyes|gaze|depths)|captivated\s+by)\b",
+    "as_they_verb": r"\b[Aa]s\s+they\s+(walked|talked|worked|sat|stood|chatted|laughed|cried|moved|drove|ran|ate|drank|danced|fought|argued|discussed|brainstormed)\b",
+    "filled_the_air": r"\b(filled\s+the\s+air|hung\s+in\s+the\s+air|wafted\s+through|permeated\s+the)\b",
+    "with_a_nod": r"\bwith\s+a\s+(nod|smile|sigh|shrug|wink|wave|gesture|look|glance|stare)\b",
+    "melodious_voice": r"\b(melodious|melodic|singsong|lyrical|lilting|musical)\s+(voice|tone|laugh|blend|mix)\b",
 }
 
 CONVERSATIONAL_AI_PATTERNS = {
@@ -30,6 +41,14 @@ CONVERSATIONAL_AI_PATTERNS = {
     "over_contracted": r"\b(it's,\s*like,|I'm,\s*like,|he's,\s*like,|she's,\s*like,)",
     "prompt_fragment": r"\b(which,\s*honestly,\s*\w+ me|I'd argue|from what I can tell)\b",
 }
+
+TEMPORAL_STAGING = r"\b(for\s+a\s+(moment|brief\s+moment|fleeting\s+moment)\b|suddenly,\s+the\s+world|time\s+seemed\s+to|the\s+world\s+around\s+(them|him|her|us)\s+(seemed|felt|appeared)\s+to)"
+
+EMOTIONAL_BEATS = r"\b(surge\s+of|wave\s+of|rush\s+of|flood\s+of|tingle\s+of|pang\s+of|flash\s+of|hint\s+of|trace\s+of)\s+(emotion|feeling|sympathy|empathy|excitement|regret|sadness|joy|anger|fear|hope|longing|nostalgia|determination|energy|electricity|warmth|recognition)\b"
+
+NARRATIVE_FRAMING = r"\b(little\s+did\s+(they|he|she|I|we)\s+know|had\s+a\s+feeling\s+that|it\s+was\s+the\s+(start|beginning)\s+of\s+something|couldn['']t\s+shake\s+the\s+feeling|felt\s+a\s+(thrill|chill|shiver)\s+(run|go)\s+(down|through|up)\s+(their|his|her|my)\s+spine)\b"
+
+DIALOGUE_ATTRIBUTION = r"\b(she\s+said,\s+her\s+voice|he\s+said,\s+his\s+voice|she\s+whispered,\s+her\s+voice|he\s+whispered,\s+his\s+voice|(s|)he\s+said,\s+(their|his|her)\s+voice\s+(barely\s+above\s+a\s+whisper|trembling|shaking|breaking|cracking|quivering|filled\s+with))\b"
 
 SENTENCE_LENGTH_PATTERN = re.compile(r"[.!?]+\s+")
 
@@ -42,6 +61,8 @@ def detect_patterns(text: str) -> dict:
         "matches": {},
         "pattern_count": 0,
         "sentence_uniformity": 0.0,
+        "burstiness_score": 0.0,
+        "perplexity_score": 0.0,
         "concerns": [],
     }
 
@@ -50,44 +71,70 @@ def detect_patterns(text: str) -> dict:
         if matches:
             scores["matches"][name] = len(matches)
             scores["pattern_count"] += len(matches)
-            match_penalty = min(len(matches) * 5, 25)
+            match_penalty = min(len(matches) * 8, 35)
             scores["total_score"] += match_penalty
-            if len(matches) >= 3:
-                scores["concerns"].append(f"High frequency of '{name}': {len(matches)} matches")
+            if len(matches) >= 2:
+                scores["concerns"].append(f"AI pattern '{name}': {len(matches)} matches")
 
     for name, pattern in CONVERSATIONAL_AI_PATTERNS.items():
         matches = re.findall(pattern, text, re.IGNORECASE)
         if matches:
             scores["matches"][name] = len(matches)
             scores["pattern_count"] += len(matches)
-            match_penalty = min(len(matches) * 4, 20)
+            match_penalty = min(len(matches) * 6, 25)
             scores["total_score"] += match_penalty
-            if len(matches) >= 2:
-                scores["concerns"].append(
-                    f"Forced casual pattern '{name}': {len(matches)} matches"
-                )
+            if len(matches) >= 1:
+                scores["concerns"].append(f"Forced casual pattern '{name}': {len(matches)} matches")
 
     sigma_matches = re.findall(SIGMA_ADJECTIVES, text, re.IGNORECASE)
     if sigma_matches:
         scores["matches"]["sigma_adjectives"] = len(sigma_matches)
         scores["pattern_count"] += len(sigma_matches)
-        scores["total_score"] += min(len(sigma_matches) * 3, 15)
+        scores["total_score"] += min(len(sigma_matches) * 5, 20)
+
+    for name, pattern in [
+        ("temporal_staging", TEMPORAL_STAGING),
+        ("emotional_beats", EMOTIONAL_BEATS),
+        ("narrative_framing", NARRATIVE_FRAMING),
+        ("dialogue_attribution", DIALOGUE_ATTRIBUTION),
+    ]:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        if matches:
+            scores["matches"][name] = len(matches)
+            scores["pattern_count"] += len(matches)
+            scores["total_score"] += min(len(matches) * 7, 25)
+            if len(matches) >= 1:
+                scores["concerns"].append(f"Formulaic '{name}': {len(matches)} matches")
 
     sentences = [s.strip() for s in SENTENCE_LENGTH_PATTERN.split(text) if s.strip()]
     words_in_text = re.findall(r"\b\w+\b", text)
+
     if sentences and words_in_text:
         word_counts = [len(s.split()) for s in sentences]
-        if len(word_counts) > 2:
+        if len(word_counts) > 3:
             mean_len = sum(word_counts) / len(word_counts)
             diffs = [abs(c - mean_len) for c in word_counts]
             avg_deviation = sum(diffs) / len(diffs)
             uniformity = 1.0 / (avg_deviation + 1.0)
             scores["sentence_uniformity"] = round(uniformity, 3)
-            if uniformity > 0.6:
-                scores["total_score"] += 15
-                scores["concerns"].append(
-                    f"Sentence lengths too uniform (uniformity={uniformity:.2f})"
-                )
+
+            if uniformity > 0.5:
+                penalty = 15 + int((uniformity - 0.5) * 60)
+                scores["total_score"] += penalty
+                scores["concerns"].append(f"Sentence lengths too uniform ({uniformity:.2f})")
+            elif uniformity > 0.35:
+                scores["total_score"] += 8
+
+            burstiness = std_dev / mean_len if (mean_len := sum(word_counts) / len(word_counts)) > 0 and (variance := sum((c - mean_len) ** 2 for c in word_counts) / len(word_counts)) > 0 and (std_dev := math.sqrt(variance)) > 0 else 0
+            burstiness = min(burstiness, 2.0)
+
+            if burstiness < 0.25:
+                scores["total_score"] += 20
+                scores["burntiness_score"] = 20
+                scores["concerns"].append(f"Very low burstiness ({burstiness:.2f}) — statistically unlikely for human text")
+            elif burstiness < 0.4:
+                scores["total_score"] += 10
+                scores["burntiness_score"] = 10
 
         starter_words = []
         for s in sentences:
@@ -95,37 +142,65 @@ def detect_patterns(text: str) -> dict:
             if words:
                 w = words[0].lower().rstrip(",.!?;:")
                 starter_words.append(w)
-        if len(starter_words) > 4:
+        if len(starter_words) > 5:
             from collections import Counter
             starter_counts = Counter(starter_words)
+
+            common_starters = {"the", "a", "an", "he", "she", "it", "they", "as", "with", "rocky", "rani"}
+            starter_variety = len([c for c in starter_counts if starter_counts[c] >= 2])
+            if starter_variety >= 3:
+                scores["total_score"] += 15
+                scores["concerns"].append(f"Repetitive sentence starters ({starter_variety} words used 2+ times)")
+
             casual_starters = {"so", "and", "but", "here's", "plus", "anyway", "though"}
             casual_hits = sum(starter_counts[w] for w in casual_starters if w in starter_counts)
             starter_ratio = casual_hits / len(starter_words)
-            if starter_ratio > 0.3:
-                scores["total_score"] += 12
-                scores["concerns"].append(
-                    f"Repetitive casual sentence starters ({round(starter_ratio*100)}% of sentences)"
-                )
+            if starter_ratio > 0.25:
+                scores["total_score"] += 15
+                scores["concerns"].append(f"Repetitive casual sentence starters ({round(starter_ratio*100)}%)")
 
             first_person_starters = {"i", "i'm", "i've", "i'd", "i'll", "my", "me"}
             fp_hits = sum(starter_counts[w] for w in first_person_starters if w in starter_counts)
             fp_ratio = fp_hits / len(starter_words)
-            if fp_ratio > 0.4:
-                penalty = min(int((fp_ratio - 0.4) * 60), 25)
+            if fp_ratio > 0.35:
+                penalty = min(int((fp_ratio - 0.35) * 80), 30)
                 scores["total_score"] += penalty
-                scores["concerns"].append(
-                    f"Excessive first-person sentence starters ({round(fp_ratio*100)}% of sentences)"
-                )
+                scores["concerns"].append(f"Excessive I/me/my sentence starters ({round(fp_ratio*100)}%)")
 
         contractions = re.findall(r"\b\w+'(?:s|t|ve|ll|re|d|m)\b", text, re.IGNORECASE)
         total_words = len(words_in_text)
         if total_words > 0:
             contraction_ratio = len(contractions) / total_words
-            if contraction_ratio > 0.06:
-                scores["total_score"] += 10
-                scores["concerns"].append(
-                    f"Unnaturally high contraction density ({round(contraction_ratio*100)}%)"
-                )
+            if contraction_ratio > 0.05:
+                scores["total_score"] += 12
+                scores["concerns"].append(f"Unnaturally high contraction density ({round(contraction_ratio*100)}%)")
+
+    bigrams_found = {}
+    unigrams_found = {}
+    words_lower = [w.lower() for w in words_in_text]
+    for i in range(len(words_lower) - 1):
+        bg = (words_lower[i], words_lower[i + 1])
+        bigrams_found[bg] = bigrams_found.get(bg, 0) + 1
+        unigrams_found[words_lower[i]] = unigrams_found.get(words_lower[i], 0) + 1
+    unigrams_found[words_lower[-1]] = unigrams_found.get(words_lower[-1], 0) + 1
+
+    if len(words_lower) >= 4 and len(unigrams_found) > 0:
+        log_prob_sum = 0.0
+        vocab = len(unigrams_found)
+        for i in range(len(words_lower) - 1):
+            bg_count = bigrams_found.get((words_lower[i], words_lower[i + 1]), 0)
+            ug_count = unigrams_found.get(words_lower[i], 0)
+            prob = (bg_count + 1) / (ug_count + vocab)
+            log_prob_sum += math.log(max(prob, 1e-10))
+        perplexity = math.exp(-log_prob_sum / max(len(words_lower) - 1, 1))
+
+        if perplexity < 30 and perplexity > 0:
+            scores["total_score"] += 25
+            scores["perplexity_score"] = 25
+            scores["concerns"].append(f"Very low perplexity ({perplexity:.0f}) — text is too predictable, strong AI signal")
+        elif perplexity < 60 and perplexity > 0:
+            scores["total_score"] += 12
+            scores["perplexity_score"] = 12
 
     scores["total_score"] = min(scores["total_score"], 100)
 
@@ -232,14 +307,18 @@ def compute_human_score(detection_score: float, burstiness: float, perplexity: f
     base_score = 100.0 - detection_score
 
     if burstiness > 0.6:
-        base_score += 5.0
+        base_score += 8.0
+    elif burstiness > 0.4:
+        base_score += 3.0
     elif burstiness < 0.2:
-        base_score -= 10.0
+        base_score -= 15.0
 
-    if perplexity > 150:
-        base_score += 5.0
-    elif perplexity < 50 and perplexity > 0:
-        base_score -= 10.0
+    if perplexity > 200:
+        base_score += 8.0
+    elif perplexity > 100:
+        base_score += 3.0
+    elif perplexity < 40 and perplexity > 0:
+        base_score -= 15.0
 
     return round(max(0.0, min(100.0, base_score)), 1)
 

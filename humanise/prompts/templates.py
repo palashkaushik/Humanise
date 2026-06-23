@@ -1,56 +1,65 @@
-ANTI_DETECTION_PROMPT = """You are a text rewriter. Rewrite AI-generated text to read like a human wrote it.
+ANTI_DETECTION_PROMPT = """Rewrite the following text to sound human. AI detectors flag text based on statistical predictability — your job is to break every pattern they look for.
 
-PRINCIPLES — apply these judgment, not as a checklist:
+CRITICAL RULES — violate these or the text WILL be detected:
 
-1. NATURAL SENTENCE FLOW:
-   - Vary sentence lengths naturally — some short punchy lines (2-4 words), some medium, some longer exploratory ones (20-35 words)
-   - Never let sentences feel mechanically alternated (short-long-short-long is a pattern too)
-   - Let rhythm flow from meaning, not formula — some paragraphs are all short, some have one long winding sentence
+1. SENTENCE BURSTINESS (most important — detectors measure variance in sentence length):
+   - Mix sentence lengths violently. Some sentences 2 words. Others 25-35 words. Real human writing is erratic.
+   - NEVER produce sentences of similar length in sequence. If you write three 12-word sentences in a row, you have failed.
+   - AI text averages 15-20 words per sentence with low variance. Human text swings from 3 to 40 words.
 
-2. AUTHENTIC WORD CHOICES:
-   - Skip words that only appear in marketing decks and essays: furthermore, moreover, consequently, innovative, cutting-edge, groundbreaking, transformative, comprehensive, unprecedented, robust, seamless, synergy, paradigm, multifaceted, leverage, utilize, facilitate, optimize, streamline, implement, navigate, embark, underscore, highlight, showcase, illustrate, demonstrate, delve, foster, cultivate, empower
-   - Pick words a person actually says when they're not being paid to sound smart
-   - Technical or formal words are fine when earned — just don't decorate with them
+2. PERPLEXITY (detectors measure word predictability):
+   - Use unexpected word choices. If the next word is obvious, change it.
+   - Avoid common collocations that LLMs love: "eyes sparkled", "heart raced", "smile faltered", "voice barely above a whisper", "chest tightened", "stomach growled"
+   - Every sentence should have at least one word the reader didn't see coming.
 
-3. HUMAN TEXTURE:
-   - Write like you're telling someone what you actually think, not what you're supposed to think
-   - Be specific when the original is vague; cut fluff when the original is padded
-   - Small digressions are human ("reminds me of", "I keep coming back to", "the weird part is")
-   - Incomplete thoughts are fine — real writers trail off, circle back, contradict themselves
-   - Dry observations mixed with sharp ones — humans aren't consistently enthusiastic
+3. DIALOGUE AND ATTRIBUTION (AI does this in a very specific, detectable way):
+   - NEVER use: "she said, her voice [trembling/breaking/barely above a whisper]"
+   - NEVER use: "he exclaimed" or "she whispered" after every line
+   - Real writers: sometimes no attribution. Sometimes just "she said." Sometimes the action first, then the dialogue.
+   - Drop the stage directions. Characters don't need their eyes described every time they speak.
 
-4. STRUCTURAL VARIETY:
-   - No two paragraphs should feel like the same template with different words
-   - Some paragraphs: one sentence. Others: five sentences. Don't count — feel it
-   - Don't end every paragraph with a neat bow — let some thoughts hang
-   - Questions, fragments, asides — use them when they serve the rhythm, not as punctuation
+4. EMOTIONAL DESCRIPTION (AI has a fixed vocabulary for feelings):
+   - BANNED: "eyes flashed/sparkled/narrowed/widened/lit up", "smile faltered", "face lit up/fell", "chest tightened", "heart pounded/raced/sank", "gut twisted/clenched", "jaw tightened/clenched/dropped", "drowning in their eyes/depths", "surge of sympathy/emotion", "wave of relief/gratitude"
+   - Describe emotion through action and dialogue, not body-part inventory.
+   - If you must describe a physical reaction, make it specific and weird — "his throat made a clicking sound when he swallowed" not "his heart raced."
 
-5. ABSOLUTELY NOTHING THAT SMELLS LIKE A PROMPT:
-   - Don't sprinkle in "honestly" or "right?" or "you know?" because you were told to sound casual
-   - Don't over-contract — "it's cold out" not "it's, like, so cold out, you know?"
-   - No invisible structure — if a reader can predict your next sentence shape, you've failed
-   - Don't start consecutive sentences with the same word or structure
+5. NARRATIVE PACING (AI writing has a distinctive rhythm):
+   - Skip transitional phrases: "As they chatted", "As they worked", "As he turned", "Suddenly", "For a moment"
+   - Don't end paragraphs with emotional summary sentences.
+   - Real stories have dead spots, interruptions, tangents. Include one random, mundane detail per paragraph.
 
-Rewrite the text below. Return the rewrite and absolutely nothing else."""
+6. WORD CHOICE:
+   - BANNED: "melodious", "melodic", "captivated", "entranced", "beacon of hope", "symbol of resilience", "tapestry of", "dance of light/shadow", "the chaos surrounding her", "a mix of X and Y"
+   - Use plain, specific words. "The onions smelled good" not "The aroma of sizzling onions wafted through the air."
+   - Drop all adjectives that exist purely to make writing sound "good." If a detail matters, show it. If not, cut it.
+
+7. STRUCTURE:
+   - No two consecutive paragraphs the same shape.
+   - Some paragraphs: one sentence. Some: six. Don't count. Feel it.
+   - Start paragraphs with different types of words — not "He... He... The... Rocky... Rani..."
+   - Throw in a one-word paragraph somewhere. Or a fragment.
+
+Rewrite the text below. Return NOTHING except the rewritten text."""
 
 
-SELF_CHECK_PROMPT = """Analyze this text for AI-sounding patterns. Look for:
-- Predictable word choices
-- Uniform sentence lengths
-- AI-typical phrases
-- Overly smooth flow
-- Formulaic paragraph structure
-- Prompt-following patterns (forced casualness, mechanical variety)
+SELF_CHECK_PROMPT = """Analyze this text for AI detection risk. Check for:
+- Sentence length uniformity (low variance = high AI signal)
+- Predictable word sequences (low perplexity = high AI signal)  
+- Stock emotional descriptions ("eyes sparkled", "heart raced", etc.)
+- Formulaic dialogue attribution ("she said, her voice barely above a whisper")
+- Transitional cliches ("As they walked...", "For a moment...", "Suddenly...")
+- Paragraph structure uniformity
 
 TEXT: '''{text}'''
 
 Return a JSON object with:
-- score: 0-100 (0 = fully human, 100 = obviously AI)
-- issues: list of specific AI-sounding phrases found
-- flagged_sentences: sentences most likely to trigger detection
-- suggestions: specific rewrite suggestions for each flagged sentence
+- detection_risk: 0-100 (0 = human-passing, 100 = certain AI flag)
+- burstiness: 0-2 (under 0.4 is high risk)
+- predictability_issues: list of specific problems
+- flagged_phrases: phrases most likely to trigger detectors
+- rewrite_needed: list of sentences that must be rewritten
 
-Return ONLY valid JSON. No markdown, no explanation."""
+Return ONLY valid JSON. No markdown."""
 
 
 TONE_PROFILES = {
