@@ -1,0 +1,29 @@
+[project]
+name = "humanise"
+version = "0.1.0"
+description = "Free AI text humanization — make AI writing sound human"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Humanise" }]
+
+dependencies = [
+    "requests>=2.28",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+]
+
+[project.optional-dependencies]
+gemini = ["google-genai>=1.0"]
+groq = ["groq>=0.9"]
+all = ["humanise[gemini,groq]"]
+
+[project.scripts]
+humanise = "humanise.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["humanise*"]
