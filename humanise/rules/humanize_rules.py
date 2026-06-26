@@ -146,6 +146,11 @@ _SENTENCE_SPLITTERS = [
     (r",\s+while\s+", ". While "),
     (r",\s+although\s+", ". Although "),
     (r",\s+however\s+", ". However, "),
+    (r"\s+and\s+", ". And "),
+    (r"\s+but\s+", ". But "),
+    (r"\s+because\s+", ". Because "),
+    (r"\s+while\s+", ". While "),
+    (r"\s+although\s+", ". Although "),
     (r";\s+", ". "),
     (r":\s+", ": "),
 ]
@@ -193,8 +198,111 @@ def _force_fragment(text: str, probability: float = 0.5) -> str:
     return out
 
 
+def _guaranteed_split(text: str, max_words: int = 16) -> str:
+    """Final safety net: split ANY sentence over max_words. Non-probabilistic — always runs."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    result = []
+    for s in sentences:
+        words = s.split()
+        if len(words) <= max_words:
+            result.append(s)
+            continue
+
+        for pattern, replacement in _SENTENCE_SPLITTERS:
+            if re.search(pattern, s):
+                s = re.sub(pattern, replacement, s, count=1)
+                if len(s.split()) <= max_words:
+                    result.append(s)
+                    break
+        else:
+            chunks = []
+            remaining = words
+            while len(remaining) > max_words:
+                split_at = max_words
+                for i in range(max_words - 1, max(5, max_words - 6), -1):
+                    if i < len(remaining) and remaining[i].lower() in (
+                        "and", "but", "so", "because", "when", "if", "while",
+                        "although", "though", "since", "unless", "where",
+                        "after", "before", "until", "that", "which", "who",
+                    ):
+                        split_at = i
+                        break
+                chunk = " ".join(remaining[:split_at]).rstrip(",;") + "."
+                chunks.append(chunk)
+                remaining = remaining[split_at:]
+                if remaining and remaining[0].lower() in ("and", "but", "so", "because", "when", "if", "while", "although", "though", "since", "unless", "where", "after", "before", "until"):
+                    remaining = remaining[1:]
+            if remaining:
+                last = " ".join(remaining)
+                if last and last[0].islower():
+                    last = last[0].upper() + last[1:]
+                if not last.endswith((".", "!", "?")):
+                    last += "."
+                chunks.append(last)
+            result.append(" ".join(chunks))
+            continue
+
+        if len(s.split()) > max_words:
+            words = s.split()
+            chunks = []
+            while len(words) > max_words:
+                mid = len(words) // 2
+                chunks.append(" ".join(words[:mid]).rstrip(",;") + ".")
+                words = words[mid:]
+            if words:
+                last = " ".join(words)
+                if not last.endswith((".", "!", "?")):
+                    last += "."
+                chunks.append(last)
+            result.append(" ".join(chunks))
+        else:
+            result.append(s)
+    return " ".join(result)
+
+
+def _inject_function_words(text: str, probability: float = 0.3) -> str:
+    """Add function words (the, a, is, was, of, and, to, in, for, with) to lower AI signal.
+    Detectors flag low function-word ratio as AI."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+
+    for i in range(len(sentences)):
+        s = sentences[i]
+        words = s.split()
+        if len(words) < 3:
+            continue
+
+        for j in range(len(words)):
+            if random.random() > probability:
+                continue
+            w = words[j].lower()
+            if w in ("jumps", "runs", "walks", "sits", "stands", "looks", "sprints", "hops", "skips"):
+                if j == 0 or words[j-1].lower() in ("the", "a", "an", "was", "is", "were", "are"):
+                    continue
+                if w.endswith("s"):
+                    verb = w[:-1] + "ing"
+                    words[j] = f"was {verb}"
+                break
+            if w in ("goes", "comes", "feels", "seems", "appears"):
+                if j == 0 or words[j-1].lower() in ("the", "a", "an", "was", "is", "were", "are"):
+                    continue
+                if w == "goes":
+                    words[j] = "was going"
+                elif w == "comes":
+                    words[j] = "was coming"
+                elif w == "feels":
+                    words[j] = "was feeling"
+                elif w == "seems":
+                    words[j] = "was seeming"
+                elif w == "appears":
+                    words[j] = "was appearing"
+                break
+        sentences[i] = " ".join(words)
+
+    return " ".join(sentences)
+
+
 _LOCAL_SYNONYMS = {
-    "important": "big deal",
+    "important": "key",
     "significant": "real",
     "good": "solid",
     "bad": "rough",
@@ -223,7 +331,7 @@ _LOCAL_SYNONYMS = {
     "make": "put together",
     "use": "work with",
     "show": "put on display",
-    "help": "give a hand",
+    "help": "a hand",
     "need": "could use",
     "want": "are after",
     "like": "are into",
@@ -365,6 +473,11 @@ def _local_synonym_swap(text: str, probability: float = 0.4) -> str:
     """Replace common words with local synonyms — works without any API."""
     words = re.findall(r"\b[\w']+\b", text)
     word_set = set(w.lower() for w in words)
+
+    def _has_substring_overlap(phrase: str) -> bool:
+        phrase_words = set(phrase.lower().split())
+        return any(w in word_set for w in phrase_words if w != phrase.lower())
+
     available = [w for w in _LOCAL_SYNONYMS if w in word_set]
     if not available:
         return text
@@ -372,6 +485,8 @@ def _local_synonym_swap(text: str, probability: float = 0.4) -> str:
     out = text
     for word in available:
         replacement = _LOCAL_SYNONYMS[word]
+        if _has_substring_overlap(replacement):
+            continue
         pattern = re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
         matches = list(pattern.finditer(out))
         if not matches:
@@ -384,6 +499,7 @@ def _local_synonym_swap(text: str, probability: float = 0.4) -> str:
                 else:
                     replacement_cap = replacement
                 out = out[:m.start()] + replacement_cap + out[m.end():]
+                word_set.add(replacement.lower())
                 break
     return out
 
@@ -398,12 +514,8 @@ def _conciseness_pass(text: str) -> str:
 
 
 def _active_voice_pass(text: str, probability: float = 0.5) -> str:
-    def try_replace(match):
-        if random.random() > probability:
-            return match.group(0)
-        return match.expand(match.re.pattern.replace("\\w+(?:\\s+\\w+){0,2}", "").replace("\\b", "").replace("(?", "(?P<"))
-    for pattern, replacement in PASSIVE_PATTERNS:
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    """Disabled — regex-based active/passive conversion produces broken output.
+    Kept as a no-op for API compatibility."""
     return text
 
 
@@ -428,6 +540,8 @@ def _inject_subjectivity(text: str, probability: float = 0.08) -> str:
                 continue
             starts_eval = any(s.lower().startswith(w) for w in EVALUATIVE_WORDS)
             if starts_eval:
+                continue
+            if len(s.split()) > 10:
                 continue
             word = random.choice(EVALUATIVE_WORDS)
             sentences[i] = f"{word.capitalize()}, {s[0].lower()}{s[1:]}" if len(s) > 1 else s
@@ -504,5 +618,9 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
     text = _local_synonym_swap(text, probability=cfg["local_synonyms"])
     text = _reorder_sentence_logic(text, probability=cfg["logic_reorder"])
     text = _inject_subjectivity(text, probability=cfg["subjectivity"])
+    text = _inject_function_words(text, probability=0.3)
+
+    max_words = {"light": 18, "medium": 16, "aggressive": 14, "ninja": 12}.get(strength, 16)
+    text = _guaranteed_split(text, max_words=max_words)
 
     return text
