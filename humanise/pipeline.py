@@ -135,12 +135,16 @@ class Humanise:
 
         last = fingerprint.last_engine()
 
-        if len(self.engines) == 1:
-            return self.engines[0]
+        available_engines = [e for e in self.engines if e.available()]
+        if not available_engines:
+            return None
 
-        candidates = [e for e in self.engines if e.name != last]
+        if len(available_engines) == 1:
+            return available_engines[0]
+
+        candidates = [e for e in available_engines if e.name != last]
         if not candidates:
-            candidates = self.engines
+            candidates = available_engines
 
         weights = []
         for engine in candidates:

@@ -1,3 +1,4 @@
+import time
 from humanise.engines.base import BaseEngine, EngineResult
 from humanise.prompts.templates import ANTI_DETECTION_PROMPT
 
@@ -8,9 +9,14 @@ class GroqEngine(BaseEngine):
     def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile"):
         self.api_key = api_key
         self.model = model
+        self._rate_limited_until = 0.0
 
     def available(self) -> bool:
-        return bool(self.api_key)
+        if not self.api_key:
+            return False
+        if time.time() < self._rate_limited_until:
+            return False
+        return True
 
     def rewrite(self, text: str, temperature: float = 1.0) -> EngineResult:
         return self.rewrite_with_prompt(text, prompt=ANTI_DETECTION_PROMPT, temperature=temperature)
@@ -37,5 +43,6 @@ class GroqEngine(BaseEngine):
             )
         except Exception as e:
             if "429" in str(e) or "rate_limit" in str(e).lower():
+                self._rate_limited_until = time.time() + 60
                 return EngineResult(text="", engine=self.name, tokens_used=0)
             raise
