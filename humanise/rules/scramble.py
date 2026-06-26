@@ -118,42 +118,72 @@ def _remove_ai_starters(text: str) -> str:
 
 def _vary_sentence_lengths(paragraph: str) -> str:
     sentences = re.split(r"(?<=[.!?])\s+", paragraph)
-    if len(sentences) < 3:
+    if len(sentences) < 2:
         return paragraph
 
     result = []
-    i = 0
-    while i < len(sentences):
-        s = sentences[i]
+    for s in sentences:
         words = s.split()
-        if len(words) > 22 and i + 1 < len(sentences):
-            mid = len(words) // 2
-            s1 = " ".join(words[:mid]).rstrip(",;")
-            if not s1.endswith((".", "!", "?")):
-                s1 += "."
-            s2 = " ".join(words[mid:])
-            if s2 and s2[0].islower():
-                s2 = s2[0].upper() + s2[1:]
-            if not s2.endswith((".", "!", "?")):
-                s2 += "."
-            result.append(s1)
-            result.append(s2)
-            i += 1
-        elif len(words) <= 5 and i + 1 < len(sentences):
-            next_words = sentences[i + 1].split()
-            if next_words and len(next_words) <= 10:
-                next_words[0] = next_words[0].lower()
-                combined = s.rstrip(".") + " and " + " ".join(next_words)
-                if not combined.endswith((".", "!", "?")):
-                    combined += "."
-                result.append(combined)
-                i += 2
-                continue
-            result.append(s)
-            i += 1
+        if len(words) > 16:
+            # Split long sentences into 2-3 chunks at natural break points
+            # Prefer splitting at conjunctions (and, but, so, because, when, if)
+            conjunction_pattern = re.compile(
+                r"\s+(and|but|so|because|when|if|while|although|though|since|unless|where|after|before|until)\s+",
+                re.IGNORECASE,
+            )
+            parts = conjunction_pattern.split(" ".join(words))
+            if len(parts) > 2:
+                # Reconstruct: parts come in pairs [before, conj, after, conj, after...]
+                chunks = []
+                i = 0
+                current_chunk = []
+                while i < len(parts):
+                    current_chunk.append(parts[i])
+                    i += 1
+                    if i < len(parts) and parts[i].lower() in ("and", "but", "so", "because", "when", "if", "while", "although", "though", "since", "unless", "where", "after", "before", "until"):
+                        # Check if current chunk is long enough to split here
+                        if len(current_chunk) >= 10:
+                            chunks.append(" ".join(current_chunk).rstrip(",;") + ".")
+                            current_chunk = [parts[i], parts[i + 1]] if i + 1 < len(parts) else []
+                            i += 2
+                        else:
+                            current_chunk.append(parts[i])
+                            if i + 1 < len(parts):
+                                current_chunk.append(parts[i + 1])
+                            i += 2
+                    i += 1
+                if current_chunk:
+                    chunks.append(" ".join(current_chunk))
+                # Cap chunk length at 15 words
+                final_chunks = []
+                for chunk in chunks:
+                    chunk_words = chunk.split()
+                    while len(chunk_words) > 15:
+                        mid = len(chunk_words) // 2
+                        part1 = " ".join(chunk_words[:mid]).rstrip(",;") + "."
+                        part2 = " ".join(chunk_words[mid:])
+                        if part2 and part2[0].islower():
+                            part2 = part2[0].upper() + part2[1:]
+                        final_chunks.append(part1)
+                        chunk_words = part2.split()
+                    if chunk_words:
+                        final_chunks.append(" ".join(chunk_words))
+                result.extend(final_chunks)
+            else:
+                # No conjunctions found — split at midpoint
+                mid = len(words) // 2
+                s1 = " ".join(words[:mid]).rstrip(",;")
+                if not s1.endswith((".", "!", "?")):
+                    s1 += "."
+                s2 = " ".join(words[mid:])
+                if s2 and s2[0].islower():
+                    s2 = s2[0].upper() + s2[1:]
+                if not s2.endswith((".", "!", "?")):
+                    s2 += "."
+                result.append(s1)
+                result.append(s2)
         else:
             result.append(s)
-            i += 1
 
     return " ".join(result)
 

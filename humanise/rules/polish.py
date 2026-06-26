@@ -204,25 +204,8 @@ def aggressive_polish(text: str) -> str:
 
 
 def _inject_em_dashes(text: str) -> str:
-    sentences = re.split(r"(?<=[.!?])\s+", text)
-    if len(sentences) < 3:
-        return text
-
-    target = max(1, len(sentences) // 5)
-    indices = random.sample(range(len(sentences)), min(target, len(sentences)))
-
-    for idx in indices:
-        s = sentences[idx]
-        if " — " in s or "—" in s:
-            continue
-        words = s.split()
-        if len(words) > 8:
-            mid = random.randint(3, len(words) - 3)
-            part1 = " ".join(words[:mid])
-            part2 = " ".join(words[mid:])
-            sentences[idx] = f"{part1} — {part2}"
-
-    return " ".join(sentences)
+    # Em-dash injection disabled — modern AI detectors flag em-dash patterns as AI signal
+    return text
 
 
 def _add_filler_words(text: str) -> str:

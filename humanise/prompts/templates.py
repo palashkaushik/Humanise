@@ -4,10 +4,11 @@ DETECTORS USE THESE STATISTICAL SIGNALS. You must disrupt ALL of them:
 
 1. SENTENCE LENGTH — THE #1 DETECTION SIGNAL:
    - AI averages 29 words per sentence. Humans average 20-23.
-   - You MUST bring the average below 22 words.
-   - Split EVERY sentence over 18 words into two shorter ones.
-   - Add many short sentences (3-10 words) throughout.
-   - Target: 30% of sentences under 10 words, 30% between 10-20, only 40% over 20.
+   - You MUST bring the average below 18 words.
+   - Split EVERY sentence over 14 words into two shorter ones.
+   - NEVER write a sentence over 16 words.
+   - Add many short sentences (3-8 words) throughout.
+   - Target: 40% of sentences under 8 words, 40% between 8-14, only 20% over 14.
    - Example: "Akira gripped the phone, the cheap plastic digging into their palm." → "Akira gripped the phone. Cheap plastic dug into their palm."
 
 2. FUNCTION WORD RATIO:
@@ -21,8 +22,9 @@ DETECTORS USE THESE STATISTICAL SIGNALS. You must disrupt ALL of them:
 3. TOKEN PREDICTABILITY (perplexity): AI picks the most probable next word. You must use UNEXPECTED word choices. Replace common collocations with unusual ones. "Bright idea" → "sharp little idea." "Walked slowly" → "dragged along."
 
 4. SENTENCE LENGTH VARIANCE (burstiness): AI sentences cluster around the same length. You MUST create extreme variance:
-   - Mix: 3-word fragment → 8-word sentence → 25-word flowing sentence → 4-word punch
-   - NEVER let 3 consecutive sentences be within 5 words of each other in length
+   - Mix: 2-word fragment → 6-word sentence → 12-word sentence → 4-word punch
+   - NEVER let 3 consecutive sentences be within 4 words of each other in length
+   - Alternate between 3-word and 15-word sentences
 
 5. VOCABULARY DISTRIBUTION: AI overuses certain words. You must:
    - Never repeat a word (except articles/prepositions) within 3 sentences
@@ -30,9 +32,11 @@ DETECTORS USE THESE STATISTICAL SIGNALS. You must disrupt ALL of them:
    - Replace "significant" with: "noticeable," "hard to ignore," "the sort you don't forget"
    - Use at least 3 uncommon words per paragraph: "askew," "lopsided," "gummed up," "half-baked"
 
-6. PUNCTUATION PATTERNS: AI uses clean, balanced punctuation. You must:
-   - Use em dashes (—) at least 3 times per 500 words
-   - Use parenthetical asides: "(not that it mattered)", "(here's where it gets weird)"
+6. PUNCTUATION PATTERNS: AVOID em dashes (—) — modern detectors flag them as AI signal. Instead use:
+   - Periods for hard breaks
+   - Commas for soft connections
+   - Parentheses for asides: "(not that it mattered)", "(here's where it gets weird)"
+   - Colons for emphasis
    - Mix comma usage: some sentences with many commas, some with none
 
 7. STRUCTURAL DISRUPTION:
@@ -174,21 +178,19 @@ PASS_3_PUNCTUATION = """Pass 3 of multi-pass rewrite: Focus on PUNCTUATION AND V
 
 You are rewriting to break AI's clean punctuation patterns and add human voice. Your ONLY job is to mess with punctuation and inject personality:
 
-EM DASH INJECTION:
-- Use em dashes (—) at least 3 times per 500 words
-- Use them to interrupt mid-sentence: "The results were — well, surprising"
-- Use them for parenthetical asides: "The team (all three of them) showed up"
-- Use them to create emphasis: "It was done. Completely. Without question — or so we thought"
+NO EM DASHES — modern AI detectors flag em dashes (—) as a strong AI signal. Use periods, commas, colons, and parentheses instead.
 
 PUNCTUATION CHAOS:
 - Replace 2-3 commas per 500 words with semicolons
 - Use ellipses where a human would trail off: "I thought it would work... it didn't"
 - Mix comma usage: some sentences with many commas, some with zero
 - Use a period where you'd expect a comma sometimes
+- Use parentheses for asides: "(not that it mattered)", "(here's where it gets weird)"
+- Use colons for emphasis: "Here's the thing: it works"
 
 VOICE INJECTION:
 - Add one opinion per 300 words: "Honestly, it was a mess" or "Turns out, that was the right call"
-- Add one self-correction per 500 words: "The results were impressive. No wait — they were surprising"
+- Add one self-correction per 500 words: "The results were impressive. No wait, actually, they were surprising"
 - Add one rhetorical question per 300 words: "Right?" or "Isn't that weird?" or "Who knows?"
 - Add one specific detail an AI wouldn't generate: a brand name, a price, a year, a weird comparison
 
@@ -196,6 +198,8 @@ CONTRACTIONS AND CASUAL:
 - Use contractions everywhere: it's, don't, can't, won't, they're, we've
 - Use casual phrasing: "kind of", "sort of", "basically", "honestly"
 - Use informal transitions: "So anyway", "But here's the thing", "Look"
+
+SENTENCE LENGTH: Keep every sentence under 16 words. Split anything longer.
 
 Return ONLY the punctuation-and-voice-injected text. No explanations.
 
@@ -207,14 +211,15 @@ Text:
 PASS_4_FINGERPRINT = """Pass 4 of multi-pass rewrite: Focus on STATISTICAL FINGERPRINT DISRUPTION.
 
 You are rewriting to break the specific statistical patterns that AI detectors measure. The detector has flagged:
-- AVERAGE SENTENCE LENGTH: Your text averages ~29 words per sentence. AI averages 29.2. Humans average 23.2. You MUST bring this down.
-- LONG SENTENCE PROPORTION: Too many sentences over 25 words. Break them up.
+- AVERAGE SENTENCE LENGTH: Your text averages ~29 words per sentence. AI averages 29.2. Humans average 20-23. You MUST bring this down to under 18.
+- LONG SENTENCE PROPORTION: Too many sentences over 20 words. Break them ALL up.
 - FUNCTION WORD RATIO: Too few "the, a, is, was, of, and, to, in, for, with" words. Add them naturally.
+- EM-DASH USAGE: Detectors flag em dashes (—) as AI signal. REMOVE all em dashes.
 
 YOUR SPECIFIC FIXES:
 
-1. SENTENCE LENGTH — bring average below 22 words:
-   - Find every sentence over 20 words and split it
+1. SENTENCE LENGTH — bring average below 18 words, NO sentence over 16:
+   - Find every sentence over 14 words and split it
    - "The rejection letters formed a stark pile, each envelope a small, white tombstone for a future that wouldn't happen." → "Rejection letters covered the desk. Each envelope was a small white tombstone. A future that wasn't happening."
    - "Akira gripped the phone, the cheap plastic digging into their palm, while the smell of old instant coffee lingered from breakfast." → "Akira gripped the phone. Cheap plastic dug into their palm. Old coffee smell still lingered from breakfast."
 
@@ -230,7 +235,11 @@ YOUR SPECIFIC FIXES:
    - Use "phone" then "it" then "the thing" for the same object
    - Alternate "said" with "whispered" "muttered" "added"
 
-4. SPECIFIC DETAILS an AI wouldn't generate:
+4. REMOVE EM DASHES — replace with periods, commas, or parentheses:
+   - "heart — okay, maybe it. Actually skipped a beat" → "heart. Okay, maybe it. Actually skipped a beat"
+   - "mind — it was racing" → "mind. It was racing"
+
+5. SPECIFIC DETAILS an AI wouldn't generate:
    - Add a price, a brand name, a year, a specific time
    - "a faded punk band poster" is good — add more like it
    - "the smoke detector blinked once, a tiny red eye" is good
