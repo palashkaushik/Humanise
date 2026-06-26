@@ -20,17 +20,22 @@ class GroqEngine(BaseEngine):
     ) -> EngineResult:
         from groq import Groq
         client = Groq(api_key=self.api_key)
-        response = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": f"Rewrite this differently:\n\n{text}"}
-            ],
-            temperature=temperature,
-            max_tokens=4096,
-        )
-        return EngineResult(
-            text=response.choices[0].message.content or "",
-            engine=self.name,
-            tokens_used=response.usage.total_tokens if response.usage else 0,
-        )
+        try:
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": f"Rewrite this differently:\n\n{text}"}
+                ],
+                temperature=temperature,
+                max_tokens=4096,
+            )
+            return EngineResult(
+                text=response.choices[0].message.content or "",
+                engine=self.name,
+                tokens_used=response.usage.total_tokens if response.usage else 0,
+            )
+        except Exception as e:
+            if "429" in str(e) or "rate_limit" in str(e).lower():
+                return EngineResult(text="", engine=self.name, tokens_used=0)
+            raise
