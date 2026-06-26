@@ -82,13 +82,16 @@ def _get_api_key(request: Request) -> str:
 
 def _require_key(request: Request) -> dict:
     key = _get_api_key(request)
+    origin = request.headers.get("Origin", "") or request.headers.get("Referer", "")
     if not key:
+        for domain in api_keys.PARTNER_DOMAINS:
+            if domain in origin:
+                return {"allowed": True, "tier": "partner", "remaining": -1}
         raise HTTPException(status_code=401, detail={
             "error": "missing_key",
             "message": "Include an API key: Authorization: Bearer hu_...",
             "get_key": "https://humanise.pages.dev/keys",
         })
-    origin = request.headers.get("Origin", "") or request.headers.get("Referer", "")
     result = api_keys.check_rate_limit(key, origin=origin)
     if not result["allowed"]:
         raise HTTPException(status_code=429, detail=result)
