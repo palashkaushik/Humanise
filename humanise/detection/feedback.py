@@ -71,26 +71,26 @@ def detect_patterns(text: str) -> dict:
         if matches:
             scores["matches"][name] = len(matches)
             scores["pattern_count"] += len(matches)
-            match_penalty = min(len(matches) * 5, 25)
+            match_penalty = min(len(matches) * 8, 35)
             scores["total_score"] += match_penalty
-            if len(matches) >= 3:
-                scores["concerns"].append(f"High frequency of '{name}': {len(matches)} matches")
+            if len(matches) >= 2:
+                scores["concerns"].append(f"AI pattern '{name}': {len(matches)} matches")
 
     for name, pattern in CONVERSATIONAL_AI_PATTERNS.items():
         matches = re.findall(pattern, text, re.IGNORECASE)
         if matches:
             scores["matches"][name] = len(matches)
             scores["pattern_count"] += len(matches)
-            match_penalty = min(len(matches) * 4, 20)
+            match_penalty = min(len(matches) * 6, 25)
             scores["total_score"] += match_penalty
-            if len(matches) >= 2:
+            if len(matches) >= 1:
                 scores["concerns"].append(f"Forced casual pattern '{name}': {len(matches)} matches")
 
     sigma_matches = re.findall(SIGMA_ADJECTIVES, text, re.IGNORECASE)
     if sigma_matches:
         scores["matches"]["sigma_adjectives"] = len(sigma_matches)
         scores["pattern_count"] += len(sigma_matches)
-        scores["total_score"] += min(len(sigma_matches) * 3, 15)
+        scores["total_score"] += min(len(sigma_matches) * 5, 20)
 
     for name, pattern in [
         ("temporal_staging", TEMPORAL_STAGING),
@@ -102,7 +102,7 @@ def detect_patterns(text: str) -> dict:
         if matches:
             scores["matches"][name] = len(matches)
             scores["pattern_count"] += len(matches)
-            scores["total_score"] += min(len(matches) * 3, 15)
+            scores["total_score"] += min(len(matches) * 7, 25)
             if len(matches) >= 1:
                 scores["concerns"].append(f"Formulaic '{name}': {len(matches)} matches")
 
@@ -118,20 +118,23 @@ def detect_patterns(text: str) -> dict:
             uniformity = 1.0 / (avg_deviation + 1.0)
             scores["sentence_uniformity"] = round(uniformity, 3)
 
-            if uniformity > 0.6:
-                scores["total_score"] += 15
-                scores["concerns"].append(f"Sentence lengths too uniform (uniformity={uniformity:.2f})")
+            if uniformity > 0.5:
+                penalty = 15 + int((uniformity - 0.5) * 60)
+                scores["total_score"] += penalty
+                scores["concerns"].append(f"Sentence lengths too uniform ({uniformity:.2f})")
+            elif uniformity > 0.35:
+                scores["total_score"] += 8
 
             burstiness = std_dev / mean_len if (mean_len := sum(word_counts) / len(word_counts)) > 0 and (variance := sum((c - mean_len) ** 2 for c in word_counts) / len(word_counts)) > 0 and (std_dev := math.sqrt(variance)) > 0 else 0
             burstiness = min(burstiness, 2.0)
 
             if burstiness < 0.25:
-                scores["total_score"] += 8
-                scores["burntiness_score"] = 8
+                scores["total_score"] += 20
+                scores["burntiness_score"] = 20
                 scores["concerns"].append(f"Very low burstiness ({burstiness:.2f}) — statistically unlikely for human text")
             elif burstiness < 0.4:
-                scores["total_score"] += 4
-                scores["burntiness_score"] = 4
+                scores["total_score"] += 10
+                scores["burntiness_score"] = 10
 
         starter_words = []
         for s in sentences:
@@ -146,30 +149,30 @@ def detect_patterns(text: str) -> dict:
             common_starters = {"the", "a", "an", "he", "she", "it", "they", "as", "with", "rocky", "rani"}
             starter_variety = len([c for c in starter_counts if starter_counts[c] >= 2])
             if starter_variety >= 3:
-                scores["total_score"] += 10
+                scores["total_score"] += 15
                 scores["concerns"].append(f"Repetitive sentence starters ({starter_variety} words used 2+ times)")
 
             casual_starters = {"so", "and", "but", "here's", "plus", "anyway", "though"}
             casual_hits = sum(starter_counts[w] for w in casual_starters if w in starter_counts)
             starter_ratio = casual_hits / len(starter_words)
-            if starter_ratio > 0.3:
-                scores["total_score"] += 12
+            if starter_ratio > 0.25:
+                scores["total_score"] += 15
                 scores["concerns"].append(f"Repetitive casual sentence starters ({round(starter_ratio*100)}%)")
 
             first_person_starters = {"i", "i'm", "i've", "i'd", "i'll", "my", "me"}
             fp_hits = sum(starter_counts[w] for w in first_person_starters if w in starter_counts)
             fp_ratio = fp_hits / len(starter_words)
-            if fp_ratio > 0.4:
-                penalty = min(int((fp_ratio - 0.4) * 60), 25)
+            if fp_ratio > 0.35:
+                penalty = min(int((fp_ratio - 0.35) * 80), 30)
                 scores["total_score"] += penalty
-                scores["concerns"].append(f"Excessive first-person sentence starters ({round(fp_ratio*100)}% of sentences)")
+                scores["concerns"].append(f"Excessive I/me/my sentence starters ({round(fp_ratio*100)}%)")
 
         contractions = re.findall(r"\b\w+'(?:s|t|ve|ll|re|d|m)\b", text, re.IGNORECASE)
         total_words = len(words_in_text)
         if total_words > 0:
             contraction_ratio = len(contractions) / total_words
-            if contraction_ratio > 0.06:
-                scores["total_score"] += 10
+            if contraction_ratio > 0.05:
+                scores["total_score"] += 12
                 scores["concerns"].append(f"Unnaturally high contraction density ({round(contraction_ratio*100)}%)")
 
     bigrams_found = {}
@@ -192,12 +195,12 @@ def detect_patterns(text: str) -> dict:
         perplexity = math.exp(-log_prob_sum / max(len(words_lower) - 1, 1))
 
         if perplexity < 30 and perplexity > 0:
-            scores["total_score"] += 10
-            scores["perplexity_score"] = 10
+            scores["total_score"] += 25
+            scores["perplexity_score"] = 25
             scores["concerns"].append(f"Very low perplexity ({perplexity:.0f}) — text is too predictable, strong AI signal")
         elif perplexity < 60 and perplexity > 0:
-            scores["total_score"] += 5
-            scores["perplexity_score"] = 5
+            scores["total_score"] += 12
+            scores["perplexity_score"] = 12
 
     scores["total_score"] = min(scores["total_score"], 100)
 
@@ -304,14 +307,18 @@ def compute_human_score(detection_score: float, burstiness: float, perplexity: f
     base_score = 100.0 - detection_score
 
     if burstiness > 0.6:
-        base_score += 5.0
+        base_score += 8.0
+    elif burstiness > 0.4:
+        base_score += 3.0
     elif burstiness < 0.2:
-        base_score -= 10.0
+        base_score -= 15.0
 
-    if perplexity > 150:
-        base_score += 5.0
-    elif perplexity < 50 and perplexity > 0:
-        base_score -= 10.0
+    if perplexity > 200:
+        base_score += 8.0
+    elif perplexity > 100:
+        base_score += 3.0
+    elif perplexity < 40 and perplexity > 0:
+        base_score -= 15.0
 
     return round(max(0.0, min(100.0, base_score)), 1)
 
