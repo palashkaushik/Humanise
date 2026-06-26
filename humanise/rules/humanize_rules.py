@@ -137,6 +137,257 @@ def _vary_paragraph_lengths(text: str, split_prob: float = 0.4, merge_prob: floa
     return "\n\n".join(result)
 
 
+_SENTENCE_SPLITTERS = [
+    (r",\s+and\s+", ". And "),
+    (r",\s+but\s+", ". But "),
+    (r",\s+so\s+", ". So "),
+    (r",\s+because\s+", ". Because "),
+    (r",\s+which\s+", ". Which "),
+    (r",\s+while\s+", ". While "),
+    (r",\s+although\s+", ". Although "),
+    (r",\s+however\s+", ". However, "),
+    (r";\s+", ". "),
+    (r":\s+", ": "),
+]
+
+
+_FRAGMENT_INSERTS = [
+    "Not bad.", "Kind of wild.", "Go figure.", "Turns out.",
+    "Here's the thing.", "Make of that what you will.",
+    "Or so I thought.", "That's the thing.", "Honest answer?",
+    "No big deal.", "That's what I thought, anyway.",
+    "Well, sort of.", "At least that's the theory.",
+]
+
+
+def _force_fragment(text: str, probability: float = 0.5) -> str:
+    """Deterministically split long sentences at conjunctions/commas to create variation.
+    This is the 'always runs' rewrite that works even without an LLM."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    result = []
+    for s in sentences:
+        words = s.split()
+        if len(words) > 12 and random.random() < probability:
+            for pattern, replacement in _SENTENCE_SPLITTERS:
+                if re.search(pattern, s):
+                    s = re.sub(pattern, replacement, s, count=1)
+                    break
+            else:
+                mid = len(words) // 2
+                s1 = " ".join(words[:mid]).rstrip(",;") + "."
+                s2 = " ".join(words[mid:])
+                if s2 and s2[0].islower():
+                    s2 = s2[0].upper() + s2[1:]
+                s = f"{s1} {s2}"
+        result.append(s)
+
+    out = " ".join(result)
+
+    if random.random() < probability and len(sentences) > 4:
+        sentences = re.split(r"(?<=[.!?])\s+", out)
+        idx = random.randint(1, max(1, len(sentences) - 2))
+        fragment = random.choice(_FRAGMENT_INSERTS)
+        sentences.insert(idx, fragment)
+        out = " ".join(sentences)
+
+    return out
+
+
+_LOCAL_SYNONYMS = {
+    "important": "big deal",
+    "significant": "real",
+    "good": "solid",
+    "bad": "rough",
+    "big": "huge",
+    "small": "tiny",
+    "happy": "stoked",
+    "sad": "bummed",
+    "fast": "quick",
+    "slow": "sluggish",
+    "many": "tons of",
+    "few": "not many",
+    "often": "a lot",
+    "always": "every single time",
+    "never": "not once",
+    "very": "really",
+    "really": "honestly",
+    "great": "awesome",
+    "nice": "pretty solid",
+    "thing": "deal",
+    "things": "stuff",
+    "think": "figure",
+    "said": "was like",
+    "told": "let know",
+    "went": "headed",
+    "got": "grabbed",
+    "make": "put together",
+    "use": "work with",
+    "show": "put on display",
+    "help": "give a hand",
+    "need": "could use",
+    "want": "are after",
+    "like": "are into",
+    "know": "get",
+    "see": "catch",
+    "look": "check out",
+    "find": "track down",
+    "give": "hand over",
+    "take": "grab",
+    "come": "show up",
+    "go": "head out",
+    "tell": "let in on",
+    "ask": "put the question to",
+    "try": "give it a shot",
+    "start": "kick off",
+    "stop": "wrap up",
+    "keep": "hang on to",
+    "hold": "cling to",
+    "put": "stick",
+    "turn": "spin",
+    "move": "shift",
+    "run": "dash",
+    "walk": "stroll",
+    "sit": "park yourself",
+    "stand": "be on your feet",
+    "talk": "chat",
+    "speak": "yap",
+    "write": "jot down",
+    "read": "go through",
+    "open": "pop open",
+    "close": "shut",
+    "build": "put up",
+    "break": "snap",
+    "fix": "patch up",
+    "change": "switch up",
+    "grow": "balloon",
+    "shrink": "contract",
+    "rise": "climb",
+    "fall": "tumble",
+    "push": "shove",
+    "pull": "yank",
+    "carry": "haul",
+    "bring": "tote",
+    "leave": "bail out",
+    "stay": "hang around",
+    "wait": "hold up",
+    "follow": "tail",
+    "lead": "head up",
+    "win": "take it",
+    "lose": "drop it",
+    "play": "fool around with",
+    "work": "put in the time",
+    "live": "hang your hat",
+    "die": "kick the bucket",
+    "feel": "sense",
+    "seem": "come across",
+    "appear": "show up",
+    "happen": "go down",
+    "become": "turn into",
+    "remain": "stick around",
+    "include": "cover",
+    "contain": "hold",
+    "provide": "hand over",
+    "offer": "put on the table",
+    "allow": "let",
+    "enable": "make possible",
+    "require": "call for",
+    "suggest": "put out there",
+    "explain": "lay out",
+    "describe": "paint a picture of",
+    "develop": "build out",
+    "create": "put together",
+    "produce": "turn out",
+    "perform": "do",
+    "achieve": "pull off",
+    "succeed": "make it",
+    "fail": "fall flat",
+    "improve": "step up",
+    "increase": "ramp up",
+    "decrease": "dial back",
+    "reduce": "trim",
+    "add": "toss in",
+    "remove": "yank out",
+    "include": "cover",
+    "exclude": "cut out",
+    "consider": "think over",
+    "decide": "call it",
+    "choose": "pick",
+    "select": "single out",
+    "prefer": "lean toward",
+    "expect": "figure on",
+    "remember": "recall",
+    "forget": "blank on",
+    "realize": "catch on",
+    "understand": "get",
+    "believe": "buy",
+    "doubt": "not buy",
+    "wonder": "be curious about",
+    "imagine": "picture",
+    "suppose": "figure",
+    "assume": "take it",
+    "admit": "own up",
+    "deny": "shot down",
+    "refuse": "turn down",
+    "accept": "take",
+    "agree": "be on board",
+    "disagree": "not buy it",
+    "argue": "go back and forth",
+    "discuss": "talk over",
+    "mention": "bring up",
+    "notice": "pick up on",
+    "recognize": "place",
+    "identify": "pin down",
+    "discover": "stumble on",
+    "reveal": "let slip",
+    "hide": "keep under wraps",
+    "expose": "lay bare",
+    "protect": "watch out for",
+    "defend": "stand up for",
+    "attack": "go after",
+    "support": "back",
+    "oppose": "be against",
+    "resist": "push back",
+    "avoid": "steer clear of",
+    "prevent": "put a stop to",
+    "allow": "green-light",
+    "forbid": "shut down",
+    "encourage": "give a push to",
+    "discourage": "talk out of",
+    "influence": "sway",
+    "affect": "hit",
+    "impact": "blow",
+    "cause": "set off",
+    "result": "pan out",
+}
+
+
+def _local_synonym_swap(text: str, probability: float = 0.4) -> str:
+    """Replace common words with local synonyms — works without any API."""
+    words = re.findall(r"\b[\w']+\b", text)
+    word_set = set(w.lower() for w in words)
+    available = [w for w in _LOCAL_SYNONYMS if w in word_set]
+    if not available:
+        return text
+
+    out = text
+    for word in available:
+        replacement = _LOCAL_SYNONYMS[word]
+        pattern = re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
+        matches = list(pattern.finditer(out))
+        if not matches:
+            continue
+        for m in matches:
+            if random.random() < probability:
+                original = m.group(0)
+                if original[0].isupper():
+                    replacement_cap = replacement[0].upper() + replacement[1:]
+                else:
+                    replacement_cap = replacement
+                out = out[:m.start()] + replacement_cap + out[m.end():]
+                break
+    return out
+
+
 def _conciseness_pass(text: str) -> str:
     for pattern, replacement in VERBOSE_REPLACEMENTS.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
@@ -200,6 +451,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "subjectivity": 0.03,
             "paragraphs": (0.1, 0.1),
             "logic_reorder": 0.1,
+            "force_fragment": 0.3,
+            "local_synonyms": 0.3,
         },
         "medium": {
             "conciseness": True,
@@ -209,6 +462,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "subjectivity": 0.06,
             "paragraphs": (0.25, 0.2),
             "logic_reorder": 0.2,
+            "force_fragment": 0.5,
+            "local_synonyms": 0.4,
         },
         "aggressive": {
             "conciseness": True,
@@ -218,6 +473,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "subjectivity": 0.08,
             "paragraphs": (0.4, 0.3),
             "logic_reorder": 0.3,
+            "force_fragment": 0.7,
+            "local_synonyms": 0.5,
         },
         "ninja": {
             "conciseness": True,
@@ -227,6 +484,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "subjectivity": 0.1,
             "paragraphs": (0.5, 0.4),
             "logic_reorder": 0.4,
+            "force_fragment": 0.85,
+            "local_synonyms": 0.6,
         },
     }
     cfg = config.get(strength, config["medium"])
@@ -241,6 +500,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
         text = _break_triplets(text, probability=0.7 if strength in ("aggressive", "ninja") else 0.5)
     split_p, merge_p = cfg["paragraphs"]
     text = _vary_paragraph_lengths(text, split_prob=split_p, merge_prob=merge_p)
+    text = _force_fragment(text, probability=cfg["force_fragment"])
+    text = _local_synonym_swap(text, probability=cfg["local_synonyms"])
     text = _reorder_sentence_logic(text, probability=cfg["logic_reorder"])
     text = _inject_subjectivity(text, probability=cfg["subjectivity"])
 

@@ -260,7 +260,11 @@ class Humanise:
         temperature = config["temperature"]
 
         if not self.engines:
-            return rule_based_polish(text)
+            result = rule_based_polish(text)
+            if config.get("scramble"):
+                result = scramble(result, strength=strength)
+            result = humanize_rules(result, strength=strength)
+            return result
 
         fingerprint = EngineFingerprint()
         result = text
@@ -269,10 +273,15 @@ class Humanise:
         best_result = result
         best_score = full_analysis(result)["human_score"]
 
+        engine_actually_changed = False
         for i in range(passes):
             # Slightly increase temperature with each pass for more diversity
             pass_temp = min(1.4, temperature + (i * 0.05))
-            result = self._rewrite_pass(result, pass_temp, i, passes, fingerprint)
+            new_result = self._rewrite_pass(result, pass_temp, i, passes, fingerprint)
+
+            if new_result != result:
+                engine_actually_changed = True
+            result = new_result
 
             # Track best after each pass
             current_score = full_analysis(result)["human_score"]
@@ -298,6 +307,9 @@ class Humanise:
         current_score = full_analysis(result)["human_score"]
         if current_score > best_score:
             best_score = current_score
+            best_result = result
+
+        if best_result == text and result != text:
             best_result = result
 
         return best_result
