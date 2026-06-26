@@ -440,7 +440,7 @@ method:'POST',headers:getHeaders(),
 body:JSON.stringify({text,strength,feedback})
 });
 const d=await r.json();
-document.getElementById('output').textContent=d.text||d.detail||'Error';
+document.getElementById('output').textContent=d.text||(typeof d.detail==='object'?d.detail.message||JSON.stringify(d.detail):d.detail)||'Error';
 }catch(e){
 document.getElementById('output').textContent='Error: '+e.message;
 }
@@ -456,7 +456,7 @@ method:'POST',headers:getHeaders(),
 body:JSON.stringify({text})
 });
 const d=await r.json();
-document.getElementById('output').textContent=d.text||d.detail||'Error';
+document.getElementById('output').textContent=d.text||(typeof d.detail==='object'?d.detail.message||JSON.stringify(d.detail):d.detail)||'Error';
 }catch(e){
 document.getElementById('output').textContent='Error: '+e.message;
 }
