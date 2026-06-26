@@ -260,16 +260,36 @@ class Humanise:
         fingerprint = EngineFingerprint()
         result = text
 
+        # Track best result across passes
+        best_result = result
+        best_score = full_analysis(result)["human_score"]
+
         for i in range(passes):
-            result = self._rewrite_pass(result, temperature, i, passes, fingerprint)
+            # Slightly increase temperature with each pass for more diversity
+            pass_temp = min(1.4, temperature + (i * 0.05))
+            result = self._rewrite_pass(result, pass_temp, i, passes, fingerprint)
+
+            # Track best after each pass
+            current_score = full_analysis(result)["human_score"]
+            if current_score > best_score:
+                best_score = current_score
+                best_result = result
 
         if config["rule_polish"]:
             result = rule_based_polish(result)
+            current_score = full_analysis(result)["human_score"]
+            if current_score > best_score:
+                best_score = current_score
+                best_result = result
 
         if config.get("scramble"):
             result = scramble(result, strength=strength)
+            current_score = full_analysis(result)["human_score"]
+            if current_score > best_score:
+                best_score = current_score
+                best_result = result
 
-        return result
+        return best_result
 
     def humanize_with_report(self, text: str, strength: str = "medium") -> dict:
         config = STRENGTH_CONFIG.get(strength, STRENGTH_CONFIG["medium"])
@@ -330,65 +350,144 @@ class Humanise:
         self, text: str, strength: str = "medium", max_iterations: int | None = None
     ) -> str:
         config = STRENGTH_CONFIG.get(strength, STRENGTH_CONFIG["medium"])
-        max_iter = max_iterations or config["max_feedback_iterations"]
+        # Triple the default iterations for an aggressive loop
+        default_iters = {
+            "light": 6,
+            "medium": 8,
+            "aggressive": 10,
+            "ninja": 12,
+        }
+        max_iter = max_iterations or default_iters.get(strength, config["max_feedback_iterations"] * 3)
         target = config["target_score"]
         result = text
-
         fingerprint = EngineFingerprint()
 
-        for i in range(max_iter):
-            pass_strength = "aggressive" if i > 0 else strength
-            pass_config = STRENGTH_CONFIG.get(pass_strength, STRENGTH_CONFIG["medium"])
+        # Track best result seen so far
+        best_result = result
+        best_score = full_analysis(result)["human_score"]
+        stable_count = 0
+        last_score = -1.0
 
-            for p in range(pass_config["passes"]):
+        for i in range(max_iter):
+            # Use a different temperature for each iteration (gradually increase)
+            iteration_temp = min(1.4, config["temperature"] + (i * 0.05))
+
+            # Multi-pass rewrite with engine rotation
+            for p in range(config["passes"]):
                 result = self._rewrite_pass(
                     result,
-                    pass_config["temperature"],
+                    iteration_temp,
                     p,
-                    pass_config["passes"],
+                    config["passes"],
                     fingerprint,
                 )
 
+            # Apply rule polish after each iteration
+            if config["rule_polish"]:
+                result = rule_based_polish(result)
+
+            # Apply scramble after each iteration (for aggressive/ninja)
+            if config.get("scramble"):
+                result = scramble(result, strength=strength)
+
+            # Check score
             analysis = full_analysis(result)
-            if analysis["human_score"] >= target:
-                break
+            current_score = analysis["human_score"]
 
-            if i < max_iter - 1:
-                analysis_text = full_analysis(result)
-                concerns = analysis_text.get("concerns", [])
-                if concerns:
-                    last_engine = fingerprint.last_engine() or "unknown"
-                    feedback_prompt = FEEDBACK_MULTI_PASS.format(
-                        flagged_issues="\n".join(f"- {c}" for c in concerns[:5]),
-                        passes_completed=fingerprint.pass_count,
-                        engines_used=", ".join(fingerprint.engines_used),
-                        pass_number=fingerprint.pass_count + 1,
-                        engine_name=last_engine,
-                    )
-                    engine = self._select_engine(
-                        fingerprint.pass_count,
-                        fingerprint.pass_count + 2,
-                        fingerprint,
-                    )
-                    if engine:
-                        try:
-                            result = engine.rewrite_with_prompt(
-                                result,
-                                prompt=feedback_prompt,
-                                temperature=pass_config["temperature"],
-                            )
-                            if result and result.text.strip():
-                                result = result.text
-                                fingerprint.record(engine.name, "feedback")
-                        except AttributeError:
-                            pass
+            # Track best result
+            if current_score > best_score:
+                best_score = current_score
+                best_result = result
+                stable_count = 0
+            else:
+                stable_count += 1
 
-        if config["rule_polish"]:
-            result = rule_based_polish(result)
-        if config.get("scramble"):
-            result = scramble(result, strength=strength)
+            # If we hit target and it's stable, we can stop
+            if current_score >= target and stable_count >= 1:
+                return best_result
 
-        return result
+            # If score hasn't improved in 2 iterations, try a different strategy
+            if stable_count >= 2 and i < max_iter - 1:
+                # Use a different engine and different approach
+                concerns = analysis.get("concerns", [])
+                feedback_prompt = self._build_specific_feedback_prompt(
+                    concerns=concerns,
+                    analysis=analysis,
+                    iteration=i,
+                    fingerprint=fingerprint,
+                )
+                engine = self._select_engine(
+                    fingerprint.pass_count,
+                    fingerprint.pass_count + 2,
+                    fingerprint,
+                )
+                if engine:
+                    try:
+                        fb_result = engine.rewrite_with_prompt(
+                            result,
+                            prompt=feedback_prompt,
+                            temperature=min(1.5, iteration_temp + 0.1),
+                        )
+                        if fb_result and fb_result.text.strip():
+                            result = fb_result.text
+                            fingerprint.record(engine.name, "feedback")
+                            stable_count = 0
+                    except AttributeError:
+                        pass
+
+            last_score = current_score
+
+        return best_result
+
+    def _build_specific_feedback_prompt(
+        self,
+        concerns: list,
+        analysis: dict,
+        iteration: int,
+        fingerprint: EngineFingerprint,
+    ) -> str:
+        last_engine = fingerprint.last_engine() or "unknown"
+        passes_completed = fingerprint.pass_count
+
+        # Build a specific, actionable feedback prompt
+        concerns_text = "\n".join(f"- {c}" for c in concerns[:8]) if concerns else "- General AI patterns detected"
+
+        # Add specific stats
+        stats_lines = []
+        if analysis.get("burstiness", 0) < 0.4:
+            stats_lines.append(f"- Burstiness is LOW ({analysis['burstiness']:.2f}) — sentence lengths are too uniform. Create EXTREME variance: fragments next to run-ons.")
+        if analysis.get("perplexity", 0) < 60:
+            stats_lines.append(f"- Perplexity is LOW ({analysis['perplexity']:.0f}) — word choices are too predictable. Use UNUSUAL pairings.")
+        if analysis.get("sentence_uniformity", 0) > 0.5:
+            stats_lines.append(f"- Sentence uniformity is HIGH ({analysis['sentence_uniformity']:.2f}) — break up the rhythm.")
+        if analysis.get("pattern_count", 0) > 3:
+            stats_lines.append(f"- {analysis['pattern_count']} AI patterns detected — replace with totally different structures.")
+
+        stats_text = "\n".join(stats_lines) if stats_lines else ""
+
+        return f"""You are rewriting to pass AI detection. This is iteration {iteration + 1}. Previous attempts were flagged.
+
+FLAGGED ISSUES:
+{concerns_text}
+
+{f"STATISTICAL SIGNALS:" + chr(10) + stats_text if stats_text else ""}
+
+YOU MUST:
+1. REWRITE EVERY SENTENCE — don't just edit a few. The whole text needs to feel like a different person wrote it.
+2. USE UNUSUAL WORD COMBINATIONS — replace predictable phrases with surprising ones.
+3. VARY SENTENCE LENGTHS EXTREMELY — mix 2-word fragments with 30-word flowing sentences.
+4. ADD SPECIFIC DETAILS — brand names, prices, years, weird comparisons.
+5. USE DIFFERENT SENTENCE STARTERS — vary: prepositions, adverbs, fragments, questions.
+6. WRITE IN YOUR ENGINE'S NATURAL STYLE — you are "{last_engine}". Don't copy other engines' patterns.
+7. BREAK THE FOURTH WALL OCCASIONALLY — "Look, " "Here's the thing, " "Honestly? " "Turns out. "
+
+CRITICAL: Average sentence length MUST be under 22 words. Use contractions. Add at least 3 em dashes. Include at least 2 rhetorical questions per 300 words.
+
+Return ONLY the rewritten text. No explanations, no headers, no meta-commentary.
+
+Text to rewrite:
+
+"""
 
     def humanize_best_of(
         self, text: str, strength: str = "medium", candidates: int = 2
