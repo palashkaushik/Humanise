@@ -53,20 +53,19 @@ import Layout from '../layouts/Layout.astro';
     </div>
 
     <footer class="text-center text-zinc-700 text-xs mt-10">
-      API: <a href="/api/humanize" class="text-zinc-500 hover:text-zinc-300 underline">/api/humanize</a> &middot;
-      <a href="/api/detect" class="text-zinc-500 hover:text-zinc-300 underline">/api/detect</a> &middot;
-      <a href="/api/rules" class="text-zinc-500 hover:text-zinc-300 underline">/api/rules</a>
+      Powered by Ollama &middot; Gemini &middot; Groq &middot;
+      <a href="https://github.com" class="text-zinc-500 hover:text-zinc-300 underline">GitHub</a>
     </footer>
   </main>
 </Layout>
 
 <script>
-const API = '';
+const API = 'https://humanise.onrender.com';
 
 // Engine status
 async function loadEngineStatus() {
   try {
-    const r = await fetch('/api/health');
+    const r = await fetch(`${API}/api/health`);
     const d = await r.json();
     const el = document.getElementById('engineStatus');
     if (!el || !d.engines?.length) {
