@@ -87,7 +87,8 @@ def _require_key(request: Request) -> dict:
             "message": "Include an API key: Authorization: Bearer hu_...",
             "get_key": "https://humanise.pages.dev/keys",
         })
-    result = api_keys.check_rate_limit(key)
+    origin = request.headers.get("Origin", "") or request.headers.get("Referer", "")
+    result = api_keys.check_rate_limit(key, origin=origin)
     if not result["allowed"]:
         raise HTTPException(status_code=429, detail=result)
     return result

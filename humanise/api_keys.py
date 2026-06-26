@@ -12,6 +12,13 @@ _lock = threading.Lock()
 FREE_DAILY_LIMIT = 50
 FREE_MINUTE_LIMIT = 5
 
+PARTNER_DOMAINS = [
+    "aifreelancewriter.workers.dev",
+    "ai-freelance-writer.aifreelancewriter.workers.dev",
+    "humanise.pages.dev",
+    "humanise.onrender.com",
+]
+
 
 @dataclass
 class ApiKey:
@@ -47,13 +54,13 @@ def init():
         _load()
 
 
-def generate_key(name: str = "") -> ApiKey:
+def generate_key(name: str = "", tier: str = "free") -> ApiKey:
     with _lock:
         _load()
         key = f"hu_{secrets.token_hex(16)}"
         api_key = ApiKey(
             key=key,
-            tier="free",
+            tier=tier,
             created_at=time.time(),
             name=name,
         )
@@ -68,7 +75,7 @@ def validate_key(key: str) -> Optional[ApiKey]:
     return _keys.get(key)
 
 
-def check_rate_limit(key: str) -> dict:
+def check_rate_limit(key: str, origin: str = "") -> dict:
     now = time.time()
     with _lock:
         _load()
@@ -76,8 +83,12 @@ def check_rate_limit(key: str) -> dict:
         if not api_key:
             return {"allowed": False, "error": "invalid_key", "message": "Invalid API key"}
 
-        if api_key.tier == "paid":
-            return {"allowed": True, "tier": "paid", "remaining": -1}
+        if api_key.tier in ("paid", "partner"):
+            return {"allowed": True, "tier": api_key.tier, "remaining": -1}
+
+        for domain in PARTNER_DOMAINS:
+            if domain in origin:
+                return {"allowed": True, "tier": "partner", "remaining": -1}
 
         if now - api_key.daily_reset > 86400:
             api_key.daily_requests = 0
