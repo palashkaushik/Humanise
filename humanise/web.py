@@ -70,6 +70,7 @@ class RulesResponse(BaseModel):
 
 class KeyRequest(BaseModel):
     name: str = Field("", description="Optional name for the key")
+    tier: str = Field("free", description="Key tier: free, partner, paid")
 
 
 def _get_api_key(request: Request) -> str:
@@ -101,7 +102,7 @@ async def index():
 
 @app.post("/api/keys/generate")
 async def generate_key(req: KeyRequest):
-    api_key = api_keys.generate_key(name=req.name)
+    api_key = api_keys.generate_key(name=req.name, tier=req.tier)
     return {
         "key": api_key.key,
         "tier": api_key.tier,
