@@ -7,6 +7,7 @@ from humanise.engines.gemini import GeminiEngine
 from humanise.engines.groq import GroqEngine
 from humanise.rules.polish import rule_based_polish, aggressive_polish
 from humanise.rules.scramble import scramble
+from humanise.rules.humanize_rules import humanize_rules
 from humanise.detection.feedback import detect_patterns, full_analysis
 from humanise.prompts.templates import (
     PASS_1_STRUCTURAL,
@@ -289,6 +290,12 @@ class Humanise:
                 best_score = current_score
                 best_result = result
 
+        result = humanize_rules(result, strength=strength)
+        current_score = full_analysis(result)["human_score"]
+        if current_score > best_score:
+            best_score = current_score
+            best_result = result
+
         return best_result
 
     def humanize_with_report(self, text: str, strength: str = "medium") -> dict:
@@ -319,6 +326,8 @@ class Humanise:
 
         if config.get("scramble"):
             result = scramble(result, strength=strength)
+
+        result = humanize_rules(result, strength=strength)
 
         elapsed_ms = round((time.perf_counter() - start_time) * 1000)
         after = full_analysis(result)
@@ -437,6 +446,12 @@ class Humanise:
 
             last_score = current_score
 
+        result = humanize_rules(result, strength=strength)
+        current_score = full_analysis(result)["human_score"]
+        if current_score > best_score:
+            best_score = current_score
+            best_result = result
+
         return best_result
 
     def _build_specific_feedback_prompt(
@@ -503,6 +518,8 @@ Text to rewrite:
             best_text = rule_based_polish(best_text)
         if config.get("scramble"):
             best_text = scramble(best_text, strength=strength)
+
+        best_text = humanize_rules(best_text, strength=strength)
 
         before = full_analysis(text)
         after = full_analysis(best_text)
