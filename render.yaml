@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: humanise
+    name: humanise-api
     runtime: python
     buildCommand: pip install uv && uv pip install --system .[all]
     startCommand: uvicorn humanise.web:app --host 0.0.0.0 --port $PORT
@@ -9,3 +9,12 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+
+  - type: web
+    name: humanise-frontend
+    runtime: static
+    buildCommand: cd humanise-frontend && npm install && npm run build
+    staticPublishPath: humanise-frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
