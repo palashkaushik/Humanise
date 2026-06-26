@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from starlette.responses import Response
 from pydantic import BaseModel, Field
 from typing import Optional
 import os
@@ -8,8 +9,9 @@ import os
 from humanise.pipeline import Humanise
 from humanise.rules.polish import rule_based_polish
 from humanise.detection.feedback import detect_patterns
+from humanise import api_keys
 
-app = FastAPI(title="Humanise", description="AI text humanization API — free, open-source", version="0.1.0")
+app = FastAPI(title="Humanise", description="AI text humanization API — free, open-source", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,6 +19,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+api_keys.init()
 
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
 GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
@@ -64,13 +68,60 @@ class RulesResponse(BaseModel):
     text: str
 
 
+class KeyRequest(BaseModel):
+    name: str = Field("", description="Optional name for the key")
+
+
+def _get_api_key(request: Request) -> str:
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[7:]
+    return request.headers.get("X-API-Key", "")
+
+
+def _require_key(request: Request) -> dict:
+    key = _get_api_key(request)
+    if not key:
+        raise HTTPException(status_code=401, detail={
+            "error": "missing_key",
+            "message": "Include an API key: Authorization: Bearer hu_...",
+            "get_key": "https://humanise.pages.dev/keys",
+        })
+    result = api_keys.check_rate_limit(key)
+    if not result["allowed"]:
+        raise HTTPException(status_code=429, detail=result)
+    return result
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return HTMLResponse(content=WEB_UI, status_code=200)
 
 
+@app.post("/api/keys/generate")
+async def generate_key(req: KeyRequest):
+    api_key = api_keys.generate_key(name=req.name)
+    return {
+        "key": api_key.key,
+        "tier": api_key.tier,
+        "message": "Save this key — it won't be shown again. Add to your site: <script src='https://humanise.pages.dev/widget.js?key=" + api_key.key + "'></script>",
+    }
+
+
+@app.get("/api/keys/usage")
+async def key_usage(request: Request):
+    key = _get_api_key(request)
+    if not key:
+        raise HTTPException(status_code=401, detail={"error": "missing_key"})
+    usage = api_keys.get_usage(key)
+    if not usage:
+        raise HTTPException(status_code=404, detail={"error": "key_not_found"})
+    return usage
+
+
 @app.post("/api/humanize", response_model=HumaniseResponse)
-async def humanize(req: HumaniseRequest):
+async def humanize(req: HumaniseRequest, request: Request):
+    _require_key(request)
     try:
         h = _get_humaniser()
         if req.feedback:
@@ -83,13 +134,15 @@ async def humanize(req: HumaniseRequest):
 
 
 @app.post("/api/detect", response_model=DetectResponse)
-async def detect(req: DetectRequest):
+async def detect(req: DetectRequest, request: Request):
+    _require_key(request)
     analysis = detect_patterns(req.text)
     return DetectResponse(**analysis)
 
 
 @app.post("/api/rules", response_model=RulesResponse)
-async def rules(req: RulesRequest):
+async def rules(req: RulesRequest, request: Request):
+    _require_key(request)
     return RulesResponse(text=rule_based_polish(req.text))
 
 
@@ -115,9 +168,154 @@ async def health():
         engines_status.append(status)
     return {
         "status": "ok",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "engines": engines_status,
     }
+
+
+@app.get("/widget.js")
+async def widget_js(request: Request):
+    api_key = request.query_params.get("key", "")
+    js = f"""(function() {{
+  const API = 'https://humanise.onrender.com';
+  const KEY = '{api_key}';
+
+  const css = document.createElement('style');
+  css.textContent = `
+    .humanise-widget {{
+      position: fixed; bottom: 20px; right: 20px; z-index: 99999;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }}
+    .humanise-btn {{
+      background: #10b981; color: white; border: none; border-radius: 12px;
+      padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s;
+    }}
+    .humanise-btn:hover {{ background: #059669; transform: translateY(-1px); }}
+    .humanise-btn.processing {{ opacity: 0.7; pointer-events: none; }}
+    .humanise-panel {{
+      display: none; position: fixed; bottom: 70px; right: 20px; width: 380px;
+      background: #18181b; border: 1px solid #27272a; border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); overflow: hidden; z-index: 99999;
+    }}
+    .humanise-panel.open {{ display: block; }}
+    .humanise-panel-header {{
+      padding: 12px 16px; border-bottom: 1px solid #27272a;
+      display: flex; justify-content: space-between; align-items: center;
+    }}
+    .humanise-panel-header span {{ color: #fafafa; font-weight: 600; font-size: 14px; }}
+    .humanise-panel-close {{
+      background: none; border: none; color: #71717a; cursor: pointer; font-size: 18px;
+    }}
+    .humanise-panel-body {{ padding: 16px; }}
+    .humanise-panel textarea {{
+      width: 100%; min-height: 120px; background: #09090b; color: #fafafa;
+      border: 1px solid #27272a; border-radius: 8px; padding: 12px; font-size: 13px;
+      resize: vertical; font-family: inherit; box-sizing: border-box;
+    }}
+    .humanise-panel textarea:focus {{ outline: none; border-color: #3f3f46; }}
+    .humanise-panel-controls {{ display: flex; gap: 8px; margin-top: 10px; align-items: center; }}
+    .humanise-panel-controls select {{
+      background: #09090b; color: #fafafa; border: 1px solid #27272a;
+      border-radius: 6px; padding: 6px 10px; font-size: 13px;
+    }}
+    .humanise-panel-controls button {{
+      background: #10b981; color: white; border: none; border-radius: 8px;
+      padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }}
+    .humanise-panel-controls button:hover {{ background: #059669; }}
+    .humanise-panel-output {{
+      margin-top: 12px; padding: 12px; background: #09090b; border: 1px solid #27272a;
+      border-radius: 8px; font-size: 13px; color: #d4d4d8; white-space: pre-wrap;
+      max-height: 200px; overflow-y: auto; display: none;
+    }}
+    .humanise-panel-footer {{
+      padding: 8px 16px; border-top: 1px solid #27272a;
+      font-size: 11px; color: #52525b; text-align: center;
+    }}
+    .humanise-panel-footer a {{ color: #71717a; text-decoration: none; }}
+    .humanise-toast {{
+      position: fixed; top: 20px; right: 20px; z-index: 999999;
+      background: #ef4444; color: white; padding: 12px 20px; border-radius: 8px;
+      font-size: 13px; font-family: -apple-system, sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: none;
+    }}
+  `;
+  document.head.appendChild(css);
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="humanise-widget">
+      <div class="humanise-panel" id="humanisePanel">
+        <div class="humanise-panel-header">
+          <span>Humanise</span>
+          <button class="humanise-panel-close" onclick="document.getElementById('humanisePanel').classList.remove('open')">&times;</button>
+        </div>
+        <div class="humanise-panel-body">
+          <textarea id="humaniseInput" placeholder="Paste AI text here..."></textarea>
+          <div class="humanise-panel-controls">
+            <select id="humaniseStrength">
+              <option value="medium">Medium</option>
+              <option value="light">Light</option>
+              <option value="aggressive">Aggressive</option>
+              <option value="ninja">Ninja</option>
+            </select>
+            <button id="humaniseGo">Humanize</button>
+          </div>
+          <div class="humanise-panel-output" id="humaniseOutput"></div>
+        </div>
+        <div class="humanise-panel-footer">
+          Powered by <a href="https://humanise.pages.dev" target="_blank">Humanise</a> &middot; Free tier: 50/day
+        </div>
+      </div>
+      <button class="humanise-btn" id="humaniseToggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        Humanise
+      </button>
+    </div>
+    <div class="humanise-toast" id="humaniseToast"></div>
+  `);
+
+  document.getElementById('humaniseToggle').addEventListener('click', function() {{
+    document.getElementById('humanisePanel').classList.toggle('open');
+  }});
+
+  document.getElementById('humaniseGo').addEventListener('click', async function() {{
+    const input = document.getElementById('humaniseInput').value.trim();
+    if (!input) return;
+    const btn = this;
+    const output = document.getElementById('humaniseOutput');
+    btn.textContent = 'Processing...';
+    btn.disabled = true;
+    output.style.display = 'block';
+    output.textContent = '';
+    try {{
+      const r = await fetch(API + '/api/humanize', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + KEY }},
+        body: JSON.stringify({{ text: input, strength: document.getElementById('humaniseStrength').value }}),
+      }});
+      const d = await r.json();
+      if (r.status === 429) {{
+        output.textContent = d.message || 'Rate limit exceeded';
+        output.style.color = '#ef4444';
+      }} else if (r.status === 401) {{
+        output.textContent = d.message || 'Invalid API key';
+        output.style.color = '#ef4444';
+      }} else {{
+        output.textContent = d.text || d.detail || 'Error';
+        output.style.color = '#d4d4d8';
+      }}
+    }} catch (e) {{
+      output.textContent = 'Error: ' + e.message;
+      output.style.color = '#ef4444';
+    }}
+    btn.textContent = 'Humanize';
+    btn.disabled = false;
+  }});
+}})();
+"""
+    return Response(content=js, media_type="application/javascript")
 
 
 WEB_UI = """<!DOCTYPE html>

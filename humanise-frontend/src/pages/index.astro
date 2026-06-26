@@ -7,6 +7,7 @@ import Layout from '../layouts/Layout.astro';
     <header class="text-center mb-10">
       <h1 class="text-4xl font-bold mb-2">Humanise</h1>
       <p class="text-zinc-400 text-lg">Free, open-source AI text humanization</p>
+      <p class="text-zinc-600 text-sm mt-1">Add to any website — <a href="/keys" class="text-zinc-500 hover:text-zinc-300 underline">Get API Key</a></p>
       <div id="engineStatus" class="flex justify-center gap-4 mt-3 text-xs"></div>
     </header>
 
@@ -53,7 +54,8 @@ import Layout from '../layouts/Layout.astro';
     </div>
 
     <footer class="text-center text-zinc-700 text-xs mt-10">
-      Powered by Ollama &middot; Gemini &middot; Groq &middot;
+      <a href="/keys" class="text-zinc-500 hover:text-zinc-300 underline">Get API Key</a> &middot;
+      Powered by Gemini &middot; Groq &middot;
       <a href="https://github.com" class="text-zinc-500 hover:text-zinc-300 underline">GitHub</a>
     </footer>
   </main>
