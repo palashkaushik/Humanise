@@ -96,10 +96,27 @@ async def rules(req: RulesRequest):
 @app.get("/api/health")
 async def health():
     h = _get_humaniser()
+    engines_status = []
+    for engine in h.engines:
+        status = {"name": engine.name, "available": engine.available()}
+        if engine.name == "groq":
+            try:
+                from groq import Groq
+                client = Groq(api_key=engine.api_key)
+                client.models.list()
+                status["healthy"] = True
+            except Exception as e:
+                if "429" in str(e) or "rate_limit" in str(e).lower():
+                    status["healthy"] = False
+                    status["error"] = "rate_limited"
+                else:
+                    status["healthy"] = False
+                    status["error"] = str(e)[:100]
+        engines_status.append(status)
     return {
         "status": "ok",
         "version": "0.1.0",
-        "engines": [e.name for e in h.engines],
+        "engines": engines_status,
     }
 
 

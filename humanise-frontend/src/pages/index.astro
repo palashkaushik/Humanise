@@ -7,7 +7,7 @@ import Layout from '../layouts/Layout.astro';
     <header class="text-center mb-10">
       <h1 class="text-4xl font-bold mb-2">Humanise</h1>
       <p class="text-zinc-400 text-lg">Free, open-source AI text humanization</p>
-      <p class="text-zinc-600 text-sm mt-1">Powered by Gemini & Groq — 1,500+ requests/day free</p>
+      <div id="engineStatus" class="flex justify-center gap-4 mt-3 text-xs"></div>
     </header>
 
     <!-- Tabs -->
@@ -62,6 +62,23 @@ import Layout from '../layouts/Layout.astro';
 
 <script>
 const API = '';
+
+// Engine status
+async function loadEngineStatus() {
+  try {
+    const r = await fetch(`${API}/api/health`);
+    const d = await r.json();
+    const el = document.getElementById('engineStatus');
+    if (!el || !d.engines) return;
+    el.innerHTML = d.engines.map(e => {
+      const color = e.healthy ? 'text-emerald-400' : 'text-red-400';
+      const dot = e.healthy ? '●' : '●';
+      const label = e.healthy ? e.name : `${e.name} (rate limited)`;
+      return `<span class="${color}">${dot} ${label}</span>`;
+    }).join('');
+  } catch {}
+}
+loadEngineStatus();
 
 // Tab switching
 document.querySelectorAll('.tab-btn').forEach(btn => {
