@@ -15,5 +15,10 @@ class BaseEngine:
     def rewrite(self, text: str, temperature: float = 1.0) -> EngineResult:
         raise NotImplementedError
 
+    def rewrite_with_prompt(
+        self, text: str, prompt: str, temperature: float = 1.0
+    ) -> EngineResult:
+        return self.rewrite(text, temperature=temperature)
+
     def available(self) -> bool:
         return False

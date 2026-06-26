@@ -2,6 +2,7 @@ import re
 import math
 
 AI_PATTERNS = {
+    # Original patterns
     "furthermore_moreover": r"\b(furthermore|moreover|additionally|consequently)\b",
     "in_conclusion": r"\bin\s+conclusion\b",
     "not_only_but_also": r"\bnot\s+only\s+.*?\bbut\s+also\b",
@@ -32,6 +33,48 @@ AI_PATTERNS = {
     "filled_the_air": r"\b(filled\s+the\s+air|hung\s+in\s+the\s+air|wafted\s+through|permeated\s+the)\b",
     "with_a_nod": r"\bwith\s+a\s+(nod|smile|sigh|shrug|wink|wave|gesture|look|glance|stare)\b",
     "melodious_voice": r"\b(melodious|melodic|singsong|lyrical|lilting|musical)\s+(voice|tone|laugh|blend|mix)\b",
+    # Wikipedia AI writing indicators - significance/legacy
+    "stands_serves_as": r"\b(stands|serves)\s+as\s+(a|an|the)\s+(testament|reminder|symbol|example|reflection|representation)\b",
+    "testament_to": r"\bis\s+a\s+testament\s+to\b",
+    "underscores_highlights": r"\b(underscores?|highlights?)\s+(its|their|the|his|her)\s+(importance|significance|role|impact)\b",
+    "reflects_broader": r"\breflects?\s+(the|a|its|their)\s+(broader|wider|larger|greater)\b",
+    "symbolizing_enduring": r"\bsymboliz(e|ing|ed)\s+(its|their|the)\s+(enduring|lasting|ongoing|continuing)\b",
+    "contributing_to_the": r"\bcontribut(e|ing|ed)\s+to\s+the\b",
+    "setting_the_stage": r"\bsetting\s+the\s+stage\s+for\b",
+    "marking_shaping": r"\b(mark|marking|shape|shaping)\s+(the|a|an)\s+(beginning|start|dawn|era|age|transition|shift)\b",
+    "evolving_landscape": r"\bevolving\s+landscape\b",
+    "focal_point": r"\bfocal\s+point\b",
+    "indelible_mark": r"\bindelible\s+mark\b",
+    "deeply_rooted": r"\bdeeply\s+rooted\b",
+    "key_turning_point": r"\bkey\s+turning\s+point\b",
+    # Promotional language
+    "vibrant_rich_profound": r"\b(vibrant|rich|profound)\s+(community|culture|heritage|tradition|history|tapestry|mosaic)\b",
+    "boasts_a": r"\bboasts?\s+a\b",
+    "nestled_in": r"\bnestled\s+(in|at|within|among)\b",
+    "in_the_heart_of": r"\bin\s+the\s+heart\s+of\b",
+    "groundbreaking_renowned": r"\b(groundbreaking|renowned)\s+(research|discovery|innovation|contribution|work|achievement)\b",
+    "diverse_array": r"\bdiverse\s+array\s+of\b",
+    "commitment_to": r"\bcommitment\s+to\b",
+    "natural_beauty": r"\bnatural\s+beauty\b",
+    "active_social_media": r"\b(maintains?\s+an?\s+active|strong|significant)\s+(social\s+media|digital)\s+presence\b",
+    # Superficial analysis
+    "highlights_underscores_emphasizes": r"\b(highlight|underscore|emphasize|showcase|exemplify|foster|cultivate|nurture|enhance|enrich|bolster)\w*\b",
+    # Negative parallelisms
+    "not_just_but_also": r"\bnot\s+just\s+.*?,\s*but\s+also\b",
+    "not_x_but_y": r"\bnot\s+\w+,?\s+but\s+\w+\b",
+    "x_rather_than_y": r"\b\w+\s+rather\s+than\s+\w+\b",
+    # Summary/conclusion
+    "in_summary_conclusion": r"\b(in\s+summary|in\s+conclusion|overall|to\s+summarize|to\s+conclude)\b",
+    # AI self-reference
+    "as_an_ai": r"\bas\s+(an?\s+)?(AI|language\s+model|large\s+language\s+model)\b",
+    "it_is_worth_noting": r"\bit\s+(is|was)\s+worth\s+noting\b",
+    "worth_noting": r"\bworth\s+noting\b",
+    # Copulative replacements (AI avoids simple "is"/"are")
+    "suspect_copulatives": r"\b(serves?\s+as|stands?\s+as|marks?\s+as|represents?\s+a|boasts?\s+a|features?\s+a|maintains?\s+a|offers?\s+a|refers?\s+to)\b",
+    # Vague attributions
+    "vague_attribution": r"\b(industry\s+reports|observers\s+have\s+cited|experts?\s+argue|some\s+critics?\s+argue|several\s+sources|several\s+publications)\b",
+    # Outline-like conclusions
+    "outline_conclusion": r"\b(despite\s+its.*faces\s+several\s+challenges|despite\s+these\s+challenges|challenges\s+and\s+legacy|future\s+outlook|challenges\s+and\s+future\s+directions)\b",
 }
 
 CONVERSATIONAL_AI_PATTERNS = {
@@ -40,6 +83,14 @@ CONVERSATIONAL_AI_PATTERNS = {
     "rhetorical_tag": r",\s*(right\?|you know\?|isn't it\?)",
     "over_contracted": r"\b(it's,\s*like,|I'm,\s*like,|he's,\s*like,|she's,\s*like,)",
     "prompt_fragment": r"\b(which,\s*honestly,\s*\w+ me|I'd argue|from what I can tell)\b",
+    "i_hope_this_helps": r"\bI\s+hope\s+this\s+helps\b",
+    "of_course_certainly": r"\b(Of\s+course|Certainly|You're\s+absolutely\s+right)\b",
+    "would_you_like": r"\b(Would\s+you\s+like|Is\s+there\s+anything\s+else|Let\s+me\s+know)\b",
+    "if_you_have_concerns": r"\bIf\s+you\s+have\s+(any\s+)?(concerns|suggestions|questions|feedback)\b",
+    "i_am_committed": r"\b(I\s+am|We\s+are)\s+committed\s+to\b",
+    "i_assure_you": r"\bI\s+assure\s+you\b",
+    "my_intention_is": r"\b(my\s+intention|my\s+goal|my\s+objective)\s+is\b",
+    "ensure_article_adheres": r"\bensure\s+(the\s+)?(article|content|text)\s+(adheres|aligns|meets|conforms)\b",
 }
 
 TEMPORAL_STAGING = r"\b(for\s+a\s+(moment|brief\s+moment|fleeting\s+moment)\b|suddenly,\s+the\s+world|time\s+seemed\s+to|the\s+world\s+around\s+(them|him|her|us)\s+(seemed|felt|appeared)\s+to)"

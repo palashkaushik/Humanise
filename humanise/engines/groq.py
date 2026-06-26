@@ -13,12 +13,17 @@ class GroqEngine(BaseEngine):
         return bool(self.api_key)
 
     def rewrite(self, text: str, temperature: float = 1.0) -> EngineResult:
+        return self.rewrite_with_prompt(text, prompt=ANTI_DETECTION_PROMPT, temperature=temperature)
+
+    def rewrite_with_prompt(
+        self, text: str, prompt: str, temperature: float = 1.0
+    ) -> EngineResult:
         from groq import Groq
         client = Groq(api_key=self.api_key)
         response = client.chat.completions.create(
             model=self.model,
             messages=[
-                {"role": "system", "content": ANTI_DETECTION_PROMPT},
+                {"role": "system", "content": prompt},
                 {"role": "user", "content": f"Rewrite this differently:\n\n{text}"}
             ],
             temperature=temperature,

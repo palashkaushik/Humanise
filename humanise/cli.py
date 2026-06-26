@@ -37,12 +37,18 @@ def _format_fixes(fixes: dict) -> str:
 
 
 def _print_score_report(report: dict):
+    engines = report['engines_used']
+    if isinstance(engines, dict):
+        engines_str = f"{engines['passes']} passes, {len(set(engines['engines']))} engines"
+    else:
+        engines_str = str(engines)
+
     print()
     print("=" * 52)
     print("  HUMANISE SCORE REPORT")
     print("=" * 52)
     print(f"  Strength: {report['strength']}  |  "
-          f"Engines: {report['engines_used']}  |  "
+          f"Engines: {engines_str}  |  "
           f"Time: {report['elapsed_ms']}ms")
     print("-" * 52)
     print(f"  Human Score: {report['before']['human_score']}%  ->  "
@@ -59,6 +65,16 @@ def _print_score_report(report: dict):
     print(f"  Readability: Grade {r_before['grade_level']} ({r_before['label']})  ->  "
           f"Grade {r_after['grade_level']} ({r_after['label']})")
     print("-" * 52)
+
+    if report.get("pass_results"):
+        print("  Pass breakdown:")
+        for pr in report["pass_results"]:
+            delta = pr["score_after"] - pr["score_before"]
+            print(f"    Pass {pr['pass']}: {pr['style']} via {pr['engine']} "
+                  f"({pr['score_before']:.0f}% -> {pr['score_after']:.0f}%, "
+                  f"{'+' if delta >= 0 else ''}{delta:.0f}%)")
+        print("-" * 52)
+
     if report["fixes"]:
         for name, count in sorted(report["fixes"].items(), key=lambda x: -x[1]):
             print(f"  {name}: {count} removed")
@@ -208,7 +224,8 @@ def _output(text: str, filepath: str | None):
         try:
             print(text)
         except UnicodeEncodeError:
-            print(text.encode("utf-8", errors="replace").decode("utf-8", errors="replace"))
+            safe = text.encode("cp1252", errors="replace").decode("cp1252", errors="replace")
+            print(safe)
 
 
 if __name__ == "__main__":

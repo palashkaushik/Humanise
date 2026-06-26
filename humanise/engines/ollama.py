@@ -18,9 +18,14 @@ class OllamaEngine(BaseEngine):
             return False
 
     def rewrite(self, text: str, temperature: float = 1.1) -> EngineResult:
+        return self.rewrite_with_prompt(text, prompt=ANTI_DETECTION_PROMPT, temperature=temperature)
+
+    def rewrite_with_prompt(
+        self, text: str, prompt: str, temperature: float = 1.1
+    ) -> EngineResult:
         r = requests.post(f"{self.base_url}/api/generate", json={
             "model": self.model,
-            "system": ANTI_DETECTION_PROMPT,
+            "system": prompt,
             "prompt": f"Rewrite this to sound human:\n\n{text}",
             "stream": False,
             "options": {"temperature": temperature, "top_p": 0.95}

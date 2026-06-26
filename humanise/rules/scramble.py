@@ -2,44 +2,47 @@ import re
 import random
 
 SYNONYM_DB = {
-    "important": ["critical", "key", "central", "vital", "serious", "big"],
-    "significant": ["meaningful", "notable", "sizable", "real", "genuine"],
-    "however": ["but", "though", "still", "yet", "that said"],
-    "therefore": ["so", "thus", "as a result", "which means"],
-    "additionally": ["also", "plus", "on top of that", "and"],
-    "consequently": ["so", "as a result", "which leads to", "meaning"],
-    "substantial": ["large", "big", "sizable", "decent", "real"],
-    "demonstrate": ["show", "point to", "make clear", "reveal"],
-    "implement": ["build", "put in place", "set up", "roll out"],
-    "leverage": ["use", "draw on", "tap into", "put to work"],
-    "optimize": ["improve", "tune", "sharpen", "tighten up", "refine"],
-    "facilitate": ["help", "enable", "make possible", "ease"],
-    "utilize": ["use", "apply", "employ", "put to work"],
-    "comprehensive": ["full", "complete", "thorough", "in-depth"],
-    "robust": ["strong", "solid", "reliable", "tough", "capable"],
-    "seamless": ["smooth", "clean", "effortless", "natural"],
-    "innovative": ["new", "fresh", "creative", "novel", "different"],
-    "paradigm": ["model", "pattern", "way of thinking"],
-    "methodology": ["approach", "method", "way", "process"],
-    "framework": ["structure", "system", "setup"],
-    "landscape": ["scene", "world", "space", "field"],
-    "synergy": ["collaboration", "combined effect", "teamwork"],
-    "crucial": ["vital", "key", "critical", "central"],
-    "ensure": ["make sure", "guarantee", "lock in", "secure"],
-    "enhance": ["boost", "improve", "strengthen", "build up"],
-    "navigate": ["steer through", "work through", "find a way through"],
-    "unprecedented": ["never seen before", "unheard of", "new ground"],
-    "transformative": ["life-changing", "redefining", "remaking"],
-    "fundamentally": ["at its core", "really", "basically"],
-    "ultimately": ["in the end", "finally", "when it comes down to it"],
-    "nevertheless": ["still", "even so", "regardless"],
-    "regarding": ["about", "on", "around", "concerning"],
-    "impact": ["effect", "influence", "fallout", "result"],
-    "component": ["piece", "part", "element", "layer"],
-    "streamline": ["simplify", "speed up", "cut through"],
-    "foster": ["encourage", "build", "nurture", "spark"],
-    "empower": ["enable", "equip", "give the tools to"],
-    "established": ["set up", "built", "put in place", "created"],
+    "important": ["critical", "key", "central", "vital", "serious", "big", "the kind that matters", "the one you remember"],
+    "significant": ["meaningful", "notable", "sizable", "real", "genuine", "hard to miss"],
+    "however": ["but", "though", "still", "yet", "that said", "then again"],
+    "therefore": ["so", "thus", "as a result", "which means", "that's why"],
+    "additionally": ["also", "plus", "on top of that", "and", "then there's"],
+    "consequently": ["so", "as a result", "which leads to", "meaning", "and now"],
+    "substantial": ["large", "big", "sizable", "decent", "real", "no small thing"],
+    "demonstrate": ["show", "point to", "make clear", "reveal", "prove"],
+    "implement": ["build", "put in place", "set up", "roll out", "get going"],
+    "leverage": ["use", "draw on", "tap into", "put to work", "make use of"],
+    "optimize": ["improve", "tune", "sharpen", "tighten up", "refine", "make better"],
+    "facilitate": ["help", "enable", "make possible", "ease", "speed up"],
+    "utilize": ["use", "apply", "employ", "put to work", "make use of"],
+    "comprehensive": ["full", "complete", "thorough", "in-depth", "no stone unturned"],
+    "robust": ["strong", "solid", "reliable", "tough", "capable", "built to last"],
+    "seamless": ["smooth", "clean", "effortless", "natural", "no hiccups"],
+    "innovative": ["new", "fresh", "creative", "novel", "different", "something else"],
+    "paradigm": ["model", "pattern", "way of thinking", "approach"],
+    "methodology": ["approach", "method", "way", "process", "how we did it"],
+    "framework": ["structure", "system", "setup", "skeleton"],
+    "landscape": ["scene", "world", "space", "field", "playing field"],
+    "synergy": ["collaboration", "combined effect", "teamwork", "working together"],
+    "crucial": ["vital", "key", "critical", "central", "make-or-break"],
+    "ensure": ["make sure", "guarantee", "lock in", "secure", "nail down"],
+    "enhance": ["boost", "improve", "strengthen", "build up", "level up"],
+    "navigate": ["steer through", "work through", "find a way through", "muddle through"],
+    "unprecedented": ["never seen before", "unheard of", "new ground", "first time for everything"],
+    "transformative": ["life-changing", "redefining", "remaking", "big"],
+    "fundamentally": ["at its core", "really", "basically", "when you strip it down"],
+    "ultimately": ["in the end", "finally", "when it comes down to it", "at the end of the day"],
+    "nevertheless": ["still", "even so", "regardless", "that said"],
+    "regarding": ["about", "on", "around", "concerning", "when it comes to"],
+    "impact": ["effect", "influence", "fallout", "result", "what happened because of it"],
+    "component": ["piece", "part", "element", "layer", "building block"],
+    "streamline": ["simplify", "speed up", "cut through", "clean up"],
+    "foster": ["encourage", "build", "nurture", "spark", "grow"],
+    "empower": ["enable", "equip", "give the tools to", "set free"],
+    "established": ["set up", "built", "put in place", "created", "started"],
+    "remarkable": ["notable", "impressive", "striking", "hard to ignore", "standout"],
+    "extraordinary": ["unusual", "rare", "out of the ordinary", "something else", "wild"],
+    "substantial": ["large", "big", "decent", "real", "significant", "no small amount"],
 }
 
 DELETABLE_PHRASES = [
@@ -48,6 +51,43 @@ DELETABLE_PHRASES = [
     "it goes without saying that", "in order to",
     "in the context of", "with regard to",
     "in terms of", "in the process of",
+    "it is imperative that", "it is essential to note",
+    "it goes without saying", "it bears mentioning",
+    "it is worth highlighting", "it should be emphasized",
+]
+
+AI_STARTER_PATTERNS = [
+    (r"^(In today's world,?\s*)", ""),
+    (r"^(In this article,?\s*)", ""),
+    (r"^(In this guide,?\s*)", ""),
+    (r"^(In this post,?\s*)", ""),
+    (r"^(When it comes to\s+)", ""),
+    (r"^(It is worth noting that\s+)", ""),
+    (r"^(It goes without saying that\s+)", ""),
+    (r"^(As we move forward,?\s*)", ""),
+    (r"^(With the advent of\s+)", ""),
+    (r"^(In the realm of\s+)", ""),
+    (r"^(The world of\s+)", ""),
+    (r"^(One of the most\s+)", ""),
+    (r"^(It's no secret that\s+)", ""),
+    (r"^(There's no denying that\s+)", ""),
+]
+
+FRAGMENTS_TO_INJECT = [
+    "Not bad.", "Kind of wild.", "That's the thing.",
+    "Honestly? It works.", "Go figure.", "Strange but true.",
+    "Or so I thought.", "Turns out.", "Here's the kicker.",
+    "And just like that.", "No big deal.", "Well, sort of.",
+    "That happened.", "Make of that what you will.",
+    "At least that's the theory.", "If you say so.",
+]
+
+TRANSITIONS_TO_ADD = [
+    "But then again — ", "So anyway, ", "The thing is, ",
+    "Look, ", "Here's what happened: ", "What I mean is, ",
+    "The way I see it, ", "From where I'm standing, ",
+    "If I'm being honest, ", "Not gonna lie, ",
+    "Come to think of it, ", "Now that I mention it, ",
 ]
 
 
@@ -67,6 +107,12 @@ def _remove_filler(text: str) -> str:
     for phrase in DELETABLE_PHRASES:
         pattern = re.compile(re.escape(phrase), re.IGNORECASE)
         text = pattern.sub("", text)
+    return text
+
+
+def _remove_ai_starters(text: str) -> str:
+    for pattern, replacement in AI_STARTER_PATTERNS:
+        text = re.sub(pattern, replacement, text, count=1)
     return text
 
 
@@ -93,9 +139,9 @@ def _vary_sentence_lengths(paragraph: str) -> str:
             result.append(s1)
             result.append(s2)
             i += 1
-        elif len(words) <= 6 and i + 1 < len(sentences):
+        elif len(words) <= 5 and i + 1 < len(sentences):
             next_words = sentences[i + 1].split()
-            if next_words and len(next_words) <= 8:
+            if next_words and len(next_words) <= 10:
                 next_words[0] = next_words[0].lower()
                 combined = s.rstrip(".") + " and " + " ".join(next_words)
                 if not combined.endswith((".", "!", "?")):
@@ -112,34 +158,125 @@ def _vary_sentence_lengths(paragraph: str) -> str:
     return " ".join(result)
 
 
-def _insert_noise(paragraph: str, count: int) -> str:
-    if count <= 0:
+def _insert_fragments(paragraph: str, count: int) -> str:
+    if count <= 0 or len(paragraph) < 60:
         return paragraph
-    noises = ["I think.", "Honestly.", "Really.", "No, seriously.",
-              "Here's what I mean.", "Let me put it this way.",
-              "You know what I mean?", "Think about it."]
+
+    sentences = re.split(r"(?<=[.!?])\s+", paragraph)
+    if len(sentences) < 3:
+        return paragraph
+
     for _ in range(count):
-        if len(paragraph) > 40:
-            noise = random.choice(noises)
-            sentences = re.split(r"(?<=[.!?])\s+", paragraph)
-            if len(sentences) > 2:
-                idx = random.randint(1, len(sentences) - 1)
-                sentences.insert(idx, noise)
-                paragraph = " ".join(sentences)
-    return paragraph
+        if len(sentences) > 3:
+            idx = random.randint(1, len(sentences) - 2)
+            fragment = random.choice(FRAGMENTS_TO_INJECT)
+            sentences.insert(idx, fragment)
+
+    return " ".join(sentences)
+
+
+def _add_hedging_and_transitions(paragraph: str) -> str:
+    sentences = re.split(r"(?<=[.!?])\s+", paragraph)
+    if len(sentences) < 4:
+        return paragraph
+
+    if random.random() < 0.25 and len(sentences) > 2:
+        idx = random.randint(1, len(sentences) - 1)
+        transition = random.choice(TRANSITIONS_TO_ADD)
+        sentences[idx] = f"{transition}{sentences[idx][0].lower()}{sentences[idx][1:]}" if len(sentences[idx]) > 1 else sentences[idx]
+
+    return " ".join(sentences)
+
+
+def _add_typos(text: str, probability: float = 0.02) -> str:
+    typo_map = {
+        "the ": ["teh ", "hte "],
+        "their ": ["theri ", "thier "],
+        "your ": ["you're "],
+        "its ": ["it's "],
+        "than ": ["then "],
+        "then ": ["than "],
+        "your ": ["youre "],
+        "were ": ["we're "],
+        "its ": ["ist "],
+    }
+
+    words = text.split()
+    for i in range(len(words)):
+        for correct, typos in typo_map.items():
+            if words[i].lower() == correct.strip() and random.random() < probability:
+                words[i] = random.choice(typos)
+                break
+
+    return " ".join(words)
+
+
+def _add_colloquialisms(text: str, probability: float = 0.15) -> str:
+    colloquialisms = [
+        ("a lot", "a ton"),
+        ("very", "really"),
+        ("quite", "pretty"),
+        ("seems to be", "looks like"),
+        ("appears to be", "seems like"),
+        ("it is clear that", "you can tell that"),
+        ("it is evident that", "obviously"),
+        ("in my opinion", "I think"),
+        ("for the most part", "mostly"),
+        ("at this point", "now"),
+        ("in the future", "later"),
+        ("in the past", "before"),
+        ("as a result", "so"),
+        ("due to the fact that", "because"),
+        ("in spite of", "despite"),
+        ("at the end of the day", "ultimately"),
+        ("the fact that", "that"),
+        ("in order to", "to"),
+        ("on a regular basis", "regularly"),
+        ("at the present time", "now"),
+]
+
+    for original, replacement in colloquialisms:
+        pattern = re.compile(re.escape(original), re.IGNORECASE)
+        text = pattern.sub(
+            lambda m, r=replacement: r if random.random() < probability else m.group(0),
+            text,
+        )
+
+    return text
+
+
+def _shuffle_sentence_order(text: str, probability: float = 0.1) -> str:
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    if len(sentences) < 5:
+        return text
+
+    for i in range(len(sentences) - 1):
+        if random.random() < probability:
+            sentences[i], sentences[i + 1] = sentences[i + 1], sentences[i]
+
+    return " ".join(sentences)
 
 
 def scramble(text: str, strength: str = "medium") -> str:
     config = {
-        "light": {"synonym_prob": 0.15, "noise_count": 0, "vary_sentences": False},
-        "medium": {"synonym_prob": 0.3, "noise_count": 0, "vary_sentences": True},
-        "aggressive": {"synonym_prob": 0.5, "noise_count": 0, "vary_sentences": True},
-        "ninja": {"synonym_prob": 0.65, "noise_count": 0, "vary_sentences": True},
+        "light": {"synonym_prob": 0.2, "fragment_count": 0, "vary_sentences": False,
+                  "typo_prob": 0.0, "colloquial_prob": 0.1, "shuffle_prob": 0.0},
+        "medium": {"synonym_prob": 0.4, "fragment_count": 1, "vary_sentences": True,
+                   "typo_prob": 0.01, "colloquial_prob": 0.2, "shuffle_prob": 0.05},
+        "aggressive": {"synonym_prob": 0.6, "fragment_count": 2, "vary_sentences": True,
+                       "typo_prob": 0.02, "colloquial_prob": 0.3, "shuffle_prob": 0.1},
+        "ninja": {"synonym_prob": 0.75, "fragment_count": 3, "vary_sentences": True,
+                  "typo_prob": 0.03, "colloquial_prob": 0.4, "shuffle_prob": 0.15},
     }
     cfg = config.get(strength, config["medium"])
 
     text = _remove_filler(text)
+    text = _remove_ai_starters(text)
     text = _scramble_synonyms(text, cfg["synonym_prob"])
+    text = _add_colloquialisms(text, cfg["colloquial_prob"])
+
+    if cfg["typo_prob"] > 0:
+        text = _add_typos(text, cfg["typo_prob"])
 
     paragraphs = re.split(r"\n\s*\n", text)
     processed = []
@@ -149,10 +286,15 @@ def scramble(text: str, strength: str = "medium") -> str:
             continue
         if cfg["vary_sentences"]:
             para = _vary_sentence_lengths(para)
-        para = _insert_noise(para, cfg["noise_count"])
+        para = _insert_fragments(para, cfg["fragment_count"])
+        para = _add_hedging_and_transitions(para)
         processed.append(para)
 
     text = "\n\n".join(processed)
+
+    if cfg["shuffle_prob"] > 0:
+        text = _shuffle_sentence_order(text, cfg["shuffle_prob"])
+
     text = re.sub(r"\s{2,}", " ", text)
     text = re.sub(r"\s+\.", ".", text)
     text = re.sub(r"\s+,", ",", text)
