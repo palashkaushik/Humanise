@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { detectPatterns } from "../../lib/detection";
+
+const BACKEND_URL = "https://humanise.onrender.com";
 
 export const POST: APIRoute = async ({ request }) => {
   let body: { text?: string };
@@ -13,9 +14,17 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ error: "No text provided" }), { status: 400 });
   }
 
-  const analysis = detectPatterns(body.text);
-
-  return new Response(JSON.stringify(analysis), {
-    headers: { "Content-Type": "application/json" },
-  });
+  try {
+    const resp = await fetch(`${BACKEND_URL}/api/detect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: body.text }),
+    });
+    const data = await resp.json();
+    return new Response(JSON.stringify(data), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "Backend unavailable" }), { status: 502 });
+  }
 };
