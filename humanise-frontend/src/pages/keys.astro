@@ -34,7 +34,7 @@ import Layout from '../layouts/Layout.astro';
         <h2 class="text-lg font-semibold mb-3 text-zinc-200">2. Add this to your website</h2>
         <p class="text-zinc-500 text-sm mb-3">Paste this single line before &lt;/body&gt; on any page:</p>
         <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-3">
-          <code id="embedCode" class="text-emerald-300 text-xs font-mono break-all"></code>
+          <code id="embedCode" class="text-emerald-300 text-xs font-mono break-all">&lt;script src="https://humanise.onrender.com/widget.js?key=YOUR_KEY"&gt;&lt;/script&gt;</code>
         </div>
         <p class="text-zinc-600 text-xs mt-2">Replace <code class="text-zinc-400">YOUR_KEY</code> with your actual API key</p>
       </div>
@@ -118,7 +118,7 @@ document.getElementById('getKeyBtn').addEventListener('click', async () => {
     });
     const d = await r.json();
     document.getElementById('keyValue').textContent = d.key;
-    document.getElementById('embedCode').textContent = `<script src="https://humanise.pages.dev/widget.js?key=${d.key}"><\/script>`;
+    document.getElementById('embedCode').textContent = `<script src="https://humanise.onrender.com/widget.js?key=${d.key}"><\/script>`;
     document.getElementById('keyResult').classList.remove('hidden');
   } catch (e) {
     alert('Error: ' + e.message);

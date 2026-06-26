@@ -368,6 +368,13 @@ footer a{color:var(--accent)}
 <header>
 <h1>Humanise</h1>
 <p>Free, open-source AI text humanization — make AI writing sound human</p>
+<div style="display:flex;justify-content:center;margin-top:1rem">
+<div style="display:flex;align-items:center;gap:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;max-width:400px;width:100%">
+<span style="color:#8b949e;font-size:13px">API Key</span>
+<input id="apiKey" type="text" placeholder="hu_..." style="flex:1;background:transparent;color:var(--fg);font-size:13px;font-family:monospace;border:none;outline:none" />
+<span id="keyStatus" style="font-size:11px"></span>
+</div>
+</div>
 </header>
 
 <div class="tabs">
@@ -406,6 +413,13 @@ Powered by Ollama (free, local) &middot; Gemini (1.5K/day free) &middot; Groq (3
 </footer>
 </div>
 <script>
+const keyInput=document.getElementById('apiKey');
+const keyStatus=document.getElementById('keyStatus');
+const savedKey=localStorage.getItem('humanise_key');
+if(savedKey){keyInput.value=savedKey;keyStatus.textContent='Saved';keyStatus.style.color='var(--green)'}
+keyInput.addEventListener('input',()=>{const v=keyInput.value.trim();if(v){localStorage.setItem('humanise_key',v);keyStatus.textContent='Saved';keyStatus.style.color='var(--green)'}else{localStorage.removeItem('humanise_key');keyStatus.textContent=''}});
+function getHeaders(){const k=keyInput.value.trim();const h={'Content-Type':'application/json'};if(k)h['Authorization']='Bearer '+k;return h}
+
 function switchTab(tab){
 document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
 document.querySelectorAll('.card[id^="tab-"]').forEach(c=>c.style.display='none');
@@ -422,11 +436,11 @@ const strength=document.getElementById('strength').value;
 const feedback=document.getElementById('feedback').checked;
 try{
 const r=await fetch('/api/humanize',{
-method:'POST',headers:{'Content-Type':'application/json'},
+method:'POST',headers:getHeaders(),
 body:JSON.stringify({text,strength,feedback})
 });
 const d=await r.json();
-document.getElementById('output').textContent=d.text||d.detail;
+document.getElementById('output').textContent=d.text||d.detail||'Error';
 }catch(e){
 document.getElementById('output').textContent='Error: '+e.message;
 }
@@ -438,11 +452,11 @@ const text=document.getElementById('input-text').value.trim();
 if(!text)return;
 try{
 const r=await fetch('/api/rules',{
-method:'POST',headers:{'Content-Type':'application/json'},
+method:'POST',headers:getHeaders(),
 body:JSON.stringify({text})
 });
 const d=await r.json();
-document.getElementById('output').textContent=d.text||d.detail;
+document.getElementById('output').textContent=d.text||d.detail||'Error';
 }catch(e){
 document.getElementById('output').textContent='Error: '+e.message;
 }
@@ -453,7 +467,7 @@ const text=document.getElementById('detect-text').value.trim();
 if(!text)return;
 try{
 const r=await fetch('/api/detect',{
-method:'POST',headers:{'Content-Type':'application/json'},
+method:'POST',headers:getHeaders(),
 body:JSON.stringify({text})
 });
 const d=await r.json();

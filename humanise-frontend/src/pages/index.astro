@@ -8,6 +8,13 @@ import Layout from '../layouts/Layout.astro';
       <h1 class="text-4xl font-bold mb-2">Humanise</h1>
       <p class="text-zinc-400 text-lg">Free, open-source AI text humanization</p>
       <p class="text-zinc-600 text-sm mt-1">Add to any website — <a href="/keys" class="text-zinc-500 hover:text-zinc-300 underline">Get API Key</a></p>
+      <div class="flex justify-center mt-4">
+        <div class="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 w-full max-w-md">
+          <span class="text-zinc-500 text-sm shrink-0">API Key</span>
+          <input id="apiKey" type="text" placeholder="hu_..." class="flex-1 bg-transparent text-zinc-200 text-sm font-mono focus:outline-none placeholder:text-zinc-600" />
+          <span id="keyStatus" class="text-xs shrink-0"></span>
+        </div>
+      </div>
       <div id="engineStatus" class="flex justify-center gap-4 mt-3 text-xs"></div>
     </header>
 
@@ -64,6 +71,34 @@ import Layout from '../layouts/Layout.astro';
 <script>
 const API = 'https://humanise.onrender.com';
 
+// API key management
+const keyInput = document.getElementById('apiKey');
+const keyStatus = document.getElementById('keyStatus');
+const savedKey = localStorage.getItem('humanise_key');
+if (savedKey) {
+  keyInput.value = savedKey;
+  keyStatus.textContent = 'Saved';
+  keyStatus.className = 'text-xs shrink-0 text-emerald-400';
+}
+keyInput.addEventListener('input', () => {
+  const val = keyInput.value.trim();
+  if (val) {
+    localStorage.setItem('humanise_key', val);
+    keyStatus.textContent = 'Saved';
+    keyStatus.className = 'text-xs shrink-0 text-emerald-400';
+  } else {
+    localStorage.removeItem('humanise_key');
+    keyStatus.textContent = '';
+  }
+});
+
+function getHeaders() {
+  const key = keyInput.value.trim();
+  const h = { 'Content-Type': 'application/json' };
+  if (key) h['Authorization'] = `Bearer ${key}`;
+  return h;
+}
+
 // Engine status
 async function loadEngineStatus() {
   try {
@@ -112,7 +147,7 @@ document.getElementById('humanizeBtn').addEventListener('click', async () => {
   try {
     const r = await fetch(`${API}/api/humanize`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({
         text,
         strength: document.getElementById('strength').value,
@@ -138,7 +173,7 @@ document.getElementById('rulesBtn').addEventListener('click', async () => {
   try {
     const r = await fetch(`${API}/api/rules`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ text }),
     });
     const d = await r.json();
@@ -157,7 +192,7 @@ document.getElementById('detectBtn').addEventListener('click', async () => {
   try {
     const r = await fetch(`${API}/api/detect`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({ text }),
     });
     const d = await r.json();
