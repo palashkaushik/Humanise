@@ -1,5 +1,4 @@
 import type { APIRoute } from "astro";
-import { getAvailableEngines } from "../../lib/ai";
 
 interface Env {
   AI?: unknown;
@@ -16,26 +15,36 @@ async function checkGroqHealth(apiKey: string): Promise<{ healthy: boolean; erro
     const data = await resp.json() as any;
     if (resp.status === 429) return { healthy: false, error: "rate_limited" };
     return { healthy: false, error: data?.error?.message?.slice(0, 100) || "unknown" };
-  } catch (e) {
+  } catch {
+    return { healthy: false, error: "connection_failed" };
+  }
+}
+
+async function checkGeminiHealth(apiKey: string): Promise<{ healthy: boolean; error?: string }> {
+  try {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (resp.ok) return { healthy: true };
+    if (resp.status === 429) return { healthy: false, error: "rate_limited" };
+    return { healthy: false, error: "unknown" };
+  } catch {
     return { healthy: false, error: "connection_failed" };
   }
 }
 
 export const GET: APIRoute = async ({ locals }) => {
   const env = (locals as any)._env as Env | undefined;
-  const engineNames = getAvailableEngines(env || {});
+  const engines: { name: string; available: boolean; healthy: boolean; error?: string }[] = [];
 
-  const engines: { name: string; available: boolean; healthy?: boolean; error?: string }[] = [];
-  for (const name of engineNames) {
-    const entry: { name: string; available: boolean; healthy?: boolean; error?: string } = { name, available: true };
-    if (name === "groq" && env?.GROQ_API_KEY) {
-      const health = await checkGroqHealth(env.GROQ_API_KEY);
-      entry.healthy = health.healthy;
-      if (health.error) entry.error = health.error;
-    } else {
-      entry.healthy = true;
-    }
-    engines.push(entry);
+  if (env?.GROQ_API_KEY) {
+    const h = await checkGroqHealth(env.GROQ_API_KEY);
+    engines.push({ name: "groq", available: true, healthy: h.healthy, error: h.error });
+  }
+  if (env?.GEMINI_API_KEY) {
+    const h = await checkGeminiHealth(env.GEMINI_API_KEY);
+    engines.push({ name: "gemini", available: true, healthy: h.healthy, error: h.error });
+  }
+  if (env?.AI) {
+    engines.push({ name: "cloudflare-ai", available: true, healthy: true });
   }
 
   return new Response(JSON.stringify({

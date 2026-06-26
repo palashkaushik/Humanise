@@ -66,17 +66,22 @@ const API = '';
 // Engine status
 async function loadEngineStatus() {
   try {
-    const r = await fetch(`${API}/api/health`);
+    const r = await fetch('/api/health');
     const d = await r.json();
     const el = document.getElementById('engineStatus');
-    if (!el || !d.engines) return;
+    if (!el || !d.engines?.length) {
+      if (el) el.innerHTML = '<span class="text-zinc-600">No engines configured</span>';
+      return;
+    }
     el.innerHTML = d.engines.map(e => {
       const color = e.healthy ? 'text-emerald-400' : 'text-red-400';
-      const dot = e.healthy ? '●' : '●';
       const label = e.healthy ? e.name : `${e.name} (rate limited)`;
-      return `<span class="${color}">${dot} ${label}</span>`;
+      return `<span class="${color}">● ${label}</span>`;
     }).join('');
-  } catch {}
+  } catch {
+    const el = document.getElementById('engineStatus');
+    if (el) el.innerHTML = '<span class="text-zinc-600">Status unavailable</span>';
+  }
 }
 loadEngineStatus();
 
