@@ -438,6 +438,7 @@ footer a{color:var(--accent)}
 <span id="keyStatus" style="font-size:11px"></span>
 </div>
 </div>
+<div id="engineStatus" style="display:flex;justify-content:center;gap:8px;margin-top:12px;font-size:12px;flex-wrap:wrap"></div>
 </header>
 
 <div class="tabs">
@@ -482,6 +483,24 @@ const savedKey=localStorage.getItem('humanise_key');
 if(savedKey){keyInput.value=savedKey;keyStatus.textContent='Saved';keyStatus.style.color='var(--green)'}
 keyInput.addEventListener('input',()=>{const v=keyInput.value.trim();if(v){localStorage.setItem('humanise_key',v);keyStatus.textContent='Saved';keyStatus.style.color='var(--green)'}else{localStorage.removeItem('humanise_key');keyStatus.textContent=''}});
 function getHeaders(){const k=keyInput.value.trim();const h={'Content-Type':'application/json'};if(k)h['Authorization']='Bearer '+k;return h}
+
+async function loadEngineStatus(){
+const el=document.getElementById('engineStatus');
+try{
+const r=await fetch('/api/health');
+const d=await r.json();
+if(!el||!d.engines||!d.engines.length){if(el)el.innerHTML='<span style="color:#484f58">No engines configured</span>';return}
+el.innerHTML=d.engines.map(e=>{
+const dot=e.healthy?'#3fb950':'#f85149';
+const label=e.healthy?e.name:e.name+' (depleted)';
+const note=e.note?' — '+e.note:'';
+const tier=e.tier?' ['+e.tier+']':'';
+return '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:#161b22;border:1px solid #30363d"><span style="width:8px;height:8px;border-radius:50%;background:'+dot+'"></span><span style="color:#c9d1d9;font-weight:500">'+label+'</span><span style="color:#8b949e">'+tier+note+'</span></span>'
+}).join('')
+}catch{if(el)el.innerHTML='<span style="color:#484f58">Status unavailable</span>'}
+}
+loadEngineStatus();
+setInterval(loadEngineStatus,60000);
 
 function switchTab(tab){
 document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
