@@ -117,7 +117,7 @@ class Humanise:
             self._add_engine(GeminiEngine(api_key=gemini_key, model=gemini_model))
         if groq_key:
             if single_groq_model or not groq_models:
-                models = [groq_models[0]] if groq_models else ["llama-3.3-70b-versatile"]
+                models = [groq_models[0]] if groq_models else ["openai/gpt-oss-20b"]
             else:
                 models = groq_models
             for model in models:

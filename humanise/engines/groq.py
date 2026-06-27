@@ -6,7 +6,7 @@ from humanise.prompts.templates import ANTI_DETECTION_PROMPT
 class GroqEngine(BaseEngine):
     name = "groq"
 
-    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, api_key: str, model: str = "openai/gpt-oss-20b"):
         self.api_key = api_key
         self.model = model
         self._rate_limited_until = 0.0
