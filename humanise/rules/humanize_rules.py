@@ -635,6 +635,93 @@ def _add_informal_openers(text: str, probability: float = 0.15) -> str:
     return " ".join(result)
 
 
+def _fix_llm_typos(text: str) -> str:
+    """Fix common typos that LLMs hallucinate at high temperature."""
+    fixes = {
+        r"\bteh\b": "the",
+        r"\bhte\b": "the",
+        r"\btaht\b": "that",
+        r"\btht\b": "that",
+        r"\bwiht\b": "with",
+        r"\bwth\b": "with",
+        r"\bthier\b": "their",
+        r"\btheri\b": "their",
+        r"\byoru\b": "your",
+        r"\bthre\b": "there",
+        r"\bther\b": "there",
+        r"\bform\b": "from",
+        r"\bhvae\b": "have",
+        r"\bliek\b": "like",
+        r"\blkike\b": "like",
+        r"\bkonw\b": "know",
+        r"\bkno\b": "know",
+        r"\bgoign\b": "going",
+        r"\bgoin\b": "going",
+        r"\bthng\b": "thing",
+        r"\bthign\b": "thing",
+        r"\bjsut\b": "just",
+        r"\bjuts\b": "just",
+        r"\brealy\b": "really",
+        r"\breallly\b": "really",
+        r"\bactaully\b": "actually",
+        r"\bactualy\b": "actually",
+        r"\bbasiclly\b": "basically",
+        r"\bbasicaly\b": "basically",
+        r"\bhonsetly\b": "honestly",
+        r"\bdefinately\b": "definitely",
+        r"\bdefinatly\b": "definitely",
+        r"\bimportnat\b": "important",
+        r"\bimportnt\b": "important",
+        r"\bdiffrent\b": "different",
+        r"\bdiffernt\b": "different",
+        r"\bquesiton\b": "question",
+        r"\bunderstad\b": "understand",
+        r"\bundestand\b": "understand",
+        r"\bexperiance\b": "experience",
+        r"\bexperince\b": "experience",
+        r"\binfromation\b": "information",
+        r"\binformaton\b": "information",
+        r"\bbeatiful\b": "beautiful",
+        r"\bbeutiful\b": "beautiful",
+        r"\bgoverment\b": "government",
+        r"\benviroment\b": "environment",
+        r"\benvirnoment\b": "environment",
+        r"\bneccessary\b": "necessary",
+        r"\bnecessery\b": "necessary",
+        r"\bseperate\b": "separate",
+        r"\bseprate\b": "separate",
+        r"\bbusness\b": "business",
+        r"\bbusines\b": "business",
+        r"\bespecailly\b": "especially",
+        r"\bespecialy\b": "especially",
+        r"\brember\b": "remember",
+        r"\breember\b": "remember",
+        r"\bpoeple\b": "people",
+        r"\bpeopel\b": "people",
+        r"\bsomethign\b": "something",
+        r"\bsometing\b": "something",
+        r"\bnothign\b": "nothing",
+        r"\bnothin\b": "nothing",
+        r"\bevreything\b": "everything",
+        r"\beveryting\b": "everything",
+        r"\boccassionally\b": "occasionally",
+        r"\boccasionaly\b": "occasionally",
+        r"\blitreally\b": "literally",
+        r"\bliteraly\b": "literally",
+        r"\bliet\b": "lie",
+        r"\bsilend\b": "silent",
+        r"\beereltyhing\b": "everything",
+        r"\bwerid\b": "weird",
+        r"\bweidr\b": "weird",
+        r"\bfaster\b": "faster",
+        r"\bwhispeered\b": "whispered",
+        r"\bwhisprerd\b": "whispered",
+    }
+    for pattern, replacement in fixes.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+
 def _add_stream_of_consciousness(text: str, probability: float = 0.08) -> str:
     """Add stream-of-consciousness asides — things humans write that LLMs never do."""
     asides = [
@@ -814,17 +901,15 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
     split_p, merge_p = cfg["paragraphs"]
     text = _vary_paragraph_lengths(text, split_prob=split_p, merge_prob=merge_p)
     text = _force_fragment(text, probability=cfg["force_fragment"])
-    text = _local_synonym_swap(text, probability=cfg["local_synonyms"])
     text = _reorder_sentence_logic(text, probability=cfg["logic_reorder"])
-    text = _inject_subjectivity(text, probability=cfg["subjectivity"])
-    text = _inject_function_words(text, probability=0.3)
 
-    # GPTZero-specific: aggressive humanization passes
-    text = _add_stream_of_consciousness(text, probability=cfg.get("stream", 0.08))
-    text = _add_hedging_and_uncertainty(text, probability=cfg.get("hedging", 0.1))
+    # GPTZero-specific: aggressive humanization passes (tone-preserving only)
     text = _scramble_sentence_order(text, probability=cfg.get("scramble_order", 0.15))
 
     max_words = {"light": 18, "medium": 16, "aggressive": 14, "ninja": 12}.get(strength, 16)
     text = _guaranteed_split(text, max_words=max_words)
+
+    # Final pass: fix any typos the LLM hallucinated
+    text = _fix_llm_typos(text)
 
     return text

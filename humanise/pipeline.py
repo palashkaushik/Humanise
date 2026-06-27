@@ -8,6 +8,7 @@ from humanise.engines.groq import GroqEngine
 from humanise.rules.polish import rule_based_polish, aggressive_polish
 from humanise.rules.scramble import scramble
 from humanise.rules.humanize_rules import humanize_rules
+from humanise.rules.elegant import apply_elegant_rules
 from humanise.detection.feedback import detect_patterns, full_analysis
 from humanise.prompts.templates import (
     ANTI_DETECTION_PROMPT,
@@ -260,15 +261,12 @@ class Humanise:
 
         if not self.engines:
             result = rule_based_polish(text)
-            if config.get("scramble"):
-                result = scramble(result, strength=strength)
-            result = humanize_rules(result, strength=strength)
+            result = apply_elegant_rules(result, strength=strength)
             return result
 
         fingerprint = EngineFingerprint()
 
-        # Single high-temperature LLM pass — multiple passes just
-        # regenerate the same statistical patterns GPTZero detects
+        # Single high-temperature LLM pass — the LLM does the heavy lifting
         engine = self._select_engine(0, 1, fingerprint)
         if engine is None:
             result = text
@@ -285,22 +283,14 @@ class Humanise:
             except Exception:
                 result = text
 
-        # Aggressive rule-based post-processing — this is what actually
-        # breaks GPTZero's statistical detection signals
-        if config["rule_polish"]:
-            result = rule_based_polish(result)
+        # Light post-processing: only AI word removal + typo fixing
+        # The LLM already handles structure, rhythm, and tone
+        result = apply_elegant_rules(result, strength=strength)
 
-        if config.get("scramble"):
-            result = scramble(result, strength=strength)
-
-        result = humanize_rules(result, strength=strength)
-
-        # If no engines available, the rule-based processing is all we have
+        # If no engines available, use rule-based only
         if not fingerprint.engines_used:
             result = rule_based_polish(text)
-            if config.get("scramble"):
-                result = scramble(result, strength=strength)
-            result = humanize_rules(result, strength=strength)
+            result = apply_elegant_rules(result, strength=strength)
 
         return result
 
@@ -327,13 +317,8 @@ class Humanise:
                 "score_after": post_pass["human_score"],
             })
 
-        if config["rule_polish"]:
-            result = rule_based_polish(result)
-
-        if config.get("scramble"):
-            result = scramble(result, strength=strength)
-
-        result = humanize_rules(result, strength=strength)
+        # Light post-processing: only AI word removal + typo fixing
+        result = apply_elegant_rules(result, strength=strength)
 
         elapsed_ms = round((time.perf_counter() - start_time) * 1000)
         after = full_analysis(result)
@@ -398,12 +383,8 @@ class Humanise:
                 except Exception:
                     pass
 
-            # Apply rule-based post-processing
-            if config["rule_polish"]:
-                result = rule_based_polish(result)
-            if config.get("scramble"):
-                result = scramble(result, strength=strength)
-            result = humanize_rules(result, strength=strength)
+            # Apply light post-processing
+            result = apply_elegant_rules(result, strength=strength)
 
             # Check score
             analysis = full_analysis(result)
@@ -447,7 +428,7 @@ class Humanise:
                     except AttributeError:
                         pass
 
-        result = humanize_rules(result, strength=strength)
+        result = apply_elegant_rules(result, strength=strength)
         current_score = full_analysis(result)["human_score"]
         if current_score > best_score:
             best_score = current_score
@@ -515,12 +496,7 @@ Text to rewrite:
             text, temperature, 0, 1, n=candidates
         )
 
-        if config["rule_polish"]:
-            best_text = rule_based_polish(best_text)
-        if config.get("scramble"):
-            best_text = scramble(best_text, strength=strength)
-
-        best_text = humanize_rules(best_text, strength=strength)
+        best_text = apply_elegant_rules(best_text, strength=strength)
 
         before = full_analysis(text)
         after = full_analysis(best_text)
