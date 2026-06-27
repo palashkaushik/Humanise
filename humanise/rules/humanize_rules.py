@@ -635,6 +635,168 @@ def _add_informal_openers(text: str, probability: float = 0.15) -> str:
     return " ".join(result)
 
 
+def _inject_typos(text: str, probability: float = 0.03) -> str:
+    """Add genuine human typos — LLMs never make typos, so this is a strong human signal."""
+    common_typos = {
+        "the": ["teh", "hte"],
+        "their": ["thier", "theri"],
+        "there": ["thre", "ther"],
+        "your": ["youre", "yoru"],
+        "you're": ["your", "youre"],
+        "its": ["ist", "it's"],
+        "it's": ["its", "ist"],
+        "about": ["abut", "abotu"],
+        "because": ["becuase", "becasue"],
+        "people": ["poeple", "peopel"],
+        "really": ["realy", "reallly"],
+        "just": ["juts", "jsut"],
+        "like": ["liek", "lkike"],
+        "what": ["wat", "whaat"],
+        "that": ["taht", "tht"],
+        "with": ["wiht", "wth"],
+        "have": ["hvae", "hav"],
+        "been": ["bn", "beem"],
+        "from": ["form", "frome"],
+        "were": ["wer", "we're"],
+        "would": ["woud", "wil"],
+        "could": ["culd", "cold"],
+        "should": ["shoud", "shoudl"],
+        "think": ["thik", "thnik"],
+        "know": ["konw", "kno"],
+        "going": ["goign", "goin"],
+        "thing": ["thng", "thign"],
+        "something": ["somethign", "someting"],
+        "nothing": ["nothign", "nothin"],
+        "everything": ["evreything", "everyting"],
+        "actually": ["actaully", "actualy"],
+        "basically": ["basiclly", "basicaly"],
+        "honestly": ["honsetly", "honestyl"],
+        "literally": ["litreally", "literaly"],
+        "definitely": ["definately", "definatly"],
+        "occasionally": ["occassionally", "occasionaly"],
+        "necessary": ["neccessary", "necessery"],
+        "separate": ["seperate", "seprate"],
+        "business": ["busness", "busines"],
+        "question": ["quesiton", "question"],
+        "different": ["diffrent", "differnt"],
+        "important": ["importnat", "importnt"],
+        "understand": ["understad", "undestand"],
+        "especially": ["especailly", "especialy"],
+        "remember": ["rember", "reember"],
+        "beautiful": ["beatiful", "beutiful"],
+        "government": ["goverment", "govment"],
+        "environment": ["enviroment", "envirnoment"],
+        "experience": ["experiance", "experince"],
+        "knowledge": ["knowlege", "knowledg"],
+        "education": ["educaion", "eduction"],
+        "information": ["infromation", "informaton"],
+    }
+
+    words = text.split()
+    for i in range(len(words)):
+        if random.random() < probability:
+            w = words[i].lower().rstrip(".,!?;:")
+            punct = words[i][len(w):] if len(words[i]) > len(w) else ""
+            if w in common_typos:
+                words[i] = random.choice(common_typos[w]) + punct
+    return " ".join(words)
+
+
+def _add_stream_of_consciousness(text: str, probability: float = 0.08) -> str:
+    """Add stream-of-consciousness asides — things humans write that LLMs never do."""
+    asides = [
+        " (at least that's what I think) ",
+        " (or something like that) ",
+        " (hard to explain) ",
+        " (you know what I mean) ",
+        " (kind of hard to put into words) ",
+        " (or maybe I'm wrong) ",
+        " (not sure about this part) ",
+        " (this is where it gets tricky) ",
+        " (I'm probably oversimplifying) ",
+        " (but you get the idea) ",
+        " (or so I've heard) ",
+        " (take this with a grain of salt) ",
+        " (I could be totally off) ",
+        " (but honestly, who knows) ",
+        " (this is just my take) ",
+    ]
+
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    if len(sentences) < 4:
+        return text
+
+    result = []
+    for s in sentences:
+        result.append(s)
+        if random.random() < probability and len(sentences) > 3:
+            aside = random.choice(asides)
+            result.append(aside.strip())
+
+    return " ".join(result)
+
+
+def _add_hedging_and_uncertainty(text: str, probability: float = 0.1) -> str:
+    """Add hedging and uncertainty — humans hedge, LLMs state things definitively."""
+    hedges = [
+        ("^", "Maybe "),
+        ("^", "Possibly "),
+        ("^", "I think "),
+        ("^", "It seems like "),
+        ("^", "Apparently "),
+        ("^", "From what I can tell, "),
+        ("^", "As far as I know, "),
+        ("^", "I'm not sure but "),
+        (" seems to", " kind of seems to"),
+        (" is clearly", " is probably"),
+        (" definitely", " probably"),
+        (" certainly", " likely"),
+        (" undoubtedly", " probably"),
+        (" is important", " matters"),
+        (" is significant", " seems notable"),
+        (" demonstrates", " shows"),
+        (" proves", " suggests"),
+        (" confirms", " points to"),
+        (" ensures", " helps with"),
+        (" guarantees", " makes it likely"),
+    ]
+
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    result = []
+    for s in sentences:
+        if random.random() < probability:
+            modified = False
+            for pattern, replacement in hedges:
+                if pattern == "^":
+                    if random.random() < 0.3:
+                        s = replacement + s[0].lower() + s[1:]
+                        modified = True
+                        break
+                elif pattern in s.lower():
+                    s = re.sub(re.escape(pattern), replacement, s, count=1, flags=re.IGNORECASE)
+                    modified = True
+                    break
+        result.append(s)
+    return " ".join(result)
+
+
+def _scramble_sentence_order(text: str, probability: float = 0.15) -> str:
+    """Randomly swap adjacent sentence pairs — breaks the 'too organized' pattern."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    if len(sentences) < 4:
+        return text
+
+    result = list(sentences)
+    i = 0
+    while i < len(result) - 1:
+        if random.random() < probability:
+            result[i], result[i + 1] = result[i + 1], result[i]
+            i += 2
+        else:
+            i += 1
+    return " ".join(result)
+
+
 def humanize_rules(text: str, strength: str = "medium") -> str:
     config = {
         "light": {
@@ -649,6 +811,10 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.3,
             "grammar_break": 0.2,
             "informal_openers": 0.1,
+            "typos": 0.02,
+            "stream": 0.05,
+            "hedging": 0.08,
+            "scramble_order": 0.1,
         },
         "medium": {
             "conciseness": True,
@@ -662,6 +828,10 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.4,
             "grammar_break": 0.3,
             "informal_openers": 0.15,
+            "typos": 0.03,
+            "stream": 0.08,
+            "hedging": 0.1,
+            "scramble_order": 0.15,
         },
         "aggressive": {
             "conciseness": True,
@@ -675,6 +845,10 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.5,
             "grammar_break": 0.4,
             "informal_openers": 0.2,
+            "typos": 0.04,
+            "stream": 0.12,
+            "hedging": 0.15,
+            "scramble_order": 0.2,
         },
         "ninja": {
             "conciseness": True,
@@ -688,6 +862,10 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.6,
             "grammar_break": 0.5,
             "informal_openers": 0.25,
+            "typos": 0.05,
+            "stream": 0.15,
+            "hedging": 0.2,
+            "scramble_order": 0.25,
         },
     }
     cfg = config.get(strength, config["medium"])
@@ -711,6 +889,12 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
     text = _reorder_sentence_logic(text, probability=cfg["logic_reorder"])
     text = _inject_subjectivity(text, probability=cfg["subjectivity"])
     text = _inject_function_words(text, probability=0.3)
+
+    # GPTZero-specific: aggressive humanization passes
+    text = _inject_typos(text, probability=cfg.get("typos", 0.03))
+    text = _add_stream_of_consciousness(text, probability=cfg.get("stream", 0.08))
+    text = _add_hedging_and_uncertainty(text, probability=cfg.get("hedging", 0.1))
+    text = _scramble_sentence_order(text, probability=cfg.get("scramble_order", 0.15))
 
     max_words = {"light": 18, "medium": 16, "aggressive": 14, "ninja": 12}.get(strength, 16)
     text = _guaranteed_split(text, max_words=max_words)

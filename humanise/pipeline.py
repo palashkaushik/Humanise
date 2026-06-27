@@ -10,6 +10,7 @@ from humanise.rules.scramble import scramble
 from humanise.rules.humanize_rules import humanize_rules
 from humanise.detection.feedback import detect_patterns, full_analysis
 from humanise.prompts.templates import (
+    ANTI_DETECTION_PROMPT,
     PASS_1_STRUCTURAL,
     PASS_2_VOCABULARY,
     PASS_3_PUNCTUATION,
@@ -27,30 +28,30 @@ MULTI_MODEL_ROTATION = [
 
 STRENGTH_CONFIG = {
     "light": {
-        "temperature": 0.8,
+        "temperature": 1.2,
         "passes": 1,
         "rule_polish": True,
         "target_score": 60,
         "max_feedback_iterations": 1,
     },
     "medium": {
-        "temperature": 0.9,
-        "passes": 2,
+        "temperature": 1.5,
+        "passes": 1,
         "rule_polish": True,
         "target_score": 75,
         "max_feedback_iterations": 2,
     },
     "aggressive": {
-        "temperature": 1.0,
-        "passes": 3,
+        "temperature": 1.8,
+        "passes": 1,
         "rule_polish": True,
         "scramble": True,
         "target_score": 85,
         "max_feedback_iterations": 3,
     },
     "ninja": {
-        "temperature": 1.1,
-        "passes": 4,
+        "temperature": 2.0,
+        "passes": 1,
         "rule_polish": True,
         "scramble": True,
         "target_score": 95,
@@ -256,8 +257,6 @@ class Humanise:
 
     def humanize(self, text: str, strength: str = "medium") -> str:
         config = STRENGTH_CONFIG.get(strength, STRENGTH_CONFIG["medium"])
-        passes = config["passes"]
-        temperature = config["temperature"]
 
         if not self.engines:
             result = rule_based_polish(text)
@@ -267,52 +266,43 @@ class Humanise:
             return result
 
         fingerprint = EngineFingerprint()
-        result = text
 
-        # Track best result across passes
-        best_result = result
-        best_score = full_analysis(result)["human_score"]
+        # Single high-temperature LLM pass — multiple passes just
+        # regenerate the same statistical patterns GPTZero detects
+        engine = self._select_engine(0, 1, fingerprint)
+        if engine is None:
+            result = text
+        else:
+            try:
+                pass_result = engine.rewrite_with_prompt(
+                    text,
+                    prompt=ANTI_DETECTION_PROMPT,
+                    temperature=config["temperature"],
+                )
+                result = pass_result.text if pass_result.text.strip() else text
+                if pass_result.text.strip():
+                    fingerprint.record(engine.name, "rewrite")
+            except Exception:
+                result = text
 
-        engine_actually_changed = False
-        for i in range(passes):
-            # Slightly increase temperature with each pass for more diversity
-            pass_temp = min(1.8, temperature + (i * 0.1))
-            new_result = self._rewrite_pass(result, pass_temp, i, passes, fingerprint)
-
-            if new_result != result:
-                engine_actually_changed = True
-            result = new_result
-
-            # Track best after each pass
-            current_score = full_analysis(result)["human_score"]
-            if current_score > best_score:
-                best_score = current_score
-                best_result = result
-
+        # Aggressive rule-based post-processing — this is what actually
+        # breaks GPTZero's statistical detection signals
         if config["rule_polish"]:
             result = rule_based_polish(result)
-            current_score = full_analysis(result)["human_score"]
-            if current_score > best_score:
-                best_score = current_score
-                best_result = result
 
         if config.get("scramble"):
             result = scramble(result, strength=strength)
-            current_score = full_analysis(result)["human_score"]
-            if current_score > best_score:
-                best_score = current_score
-                best_result = result
 
         result = humanize_rules(result, strength=strength)
-        current_score = full_analysis(result)["human_score"]
-        if current_score > best_score:
-            best_score = current_score
-            best_result = result
 
-        if best_result == text and result != text:
-            best_result = result
+        # If no engines available, the rule-based processing is all we have
+        if not fingerprint.engines_used:
+            result = rule_based_polish(text)
+            if config.get("scramble"):
+                result = scramble(result, strength=strength)
+            result = humanize_rules(result, strength=strength)
 
-        return best_result
+        return result
 
     def humanize_with_report(self, text: str, strength: str = "medium") -> dict:
         config = STRENGTH_CONFIG.get(strength, STRENGTH_CONFIG["medium"])
@@ -375,51 +365,50 @@ class Humanise:
         self, text: str, strength: str = "medium", max_iterations: int | None = None
     ) -> str:
         config = STRENGTH_CONFIG.get(strength, STRENGTH_CONFIG["medium"])
-        # Triple the default iterations for an aggressive loop
         default_iters = {
-            "light": 6,
-            "medium": 8,
-            "aggressive": 10,
-            "ninja": 12,
+            "light": 4,
+            "medium": 6,
+            "aggressive": 8,
+            "ninja": 10,
         }
-        max_iter = max_iterations or default_iters.get(strength, config["max_feedback_iterations"] * 3)
+        max_iter = max_iterations or default_iters.get(strength, config["max_feedback_iterations"] * 2)
         target = config["target_score"]
         result = text
         fingerprint = EngineFingerprint()
 
-        # Track best result seen so far
         best_result = result
         best_score = full_analysis(result)["human_score"]
         stable_count = 0
-        last_score = -1.0
 
         for i in range(max_iter):
-            # Use a different temperature for each iteration (gradually increase)
-            iteration_temp = min(1.8, config["temperature"] + (i * 0.1))
+            # Single high-temperature LLM pass per iteration
+            iteration_temp = min(2.0, config["temperature"] + (i * 0.1))
 
-            # Multi-pass rewrite with engine rotation
-            for p in range(config["passes"]):
-                result = self._rewrite_pass(
-                    result,
-                    iteration_temp,
-                    p,
-                    config["passes"],
-                    fingerprint,
-                )
+            engine = self._select_engine(i, max_iter, fingerprint)
+            if engine:
+                try:
+                    pass_result = engine.rewrite_with_prompt(
+                        result,
+                        prompt=ANTI_DETECTION_PROMPT,
+                        temperature=iteration_temp,
+                    )
+                    if pass_result.text.strip():
+                        result = pass_result.text
+                        fingerprint.record(engine.name, "rewrite")
+                except Exception:
+                    pass
 
-            # Apply rule polish after each iteration
+            # Apply rule-based post-processing
             if config["rule_polish"]:
                 result = rule_based_polish(result)
-
-            # Apply scramble after each iteration (for aggressive/ninja)
             if config.get("scramble"):
                 result = scramble(result, strength=strength)
+            result = humanize_rules(result, strength=strength)
 
             # Check score
             analysis = full_analysis(result)
             current_score = analysis["human_score"]
 
-            # Track best result
             if current_score > best_score:
                 best_score = current_score
                 best_result = result
@@ -427,13 +416,11 @@ class Humanise:
             else:
                 stable_count += 1
 
-            # If we hit target and it's stable, we can stop
             if current_score >= target and stable_count >= 1:
                 return best_result
 
-            # If score hasn't improved in 2 iterations, try a different strategy
+            # If stuck, try feedback prompt
             if stable_count >= 2 and i < max_iter - 1:
-                # Use a different engine and different approach
                 concerns = analysis.get("concerns", [])
                 feedback_prompt = self._build_specific_feedback_prompt(
                     concerns=concerns,
@@ -459,8 +446,6 @@ class Humanise:
                             stable_count = 0
                     except AttributeError:
                         pass
-
-            last_score = current_score
 
         result = humanize_rules(result, strength=strength)
         current_score = full_analysis(result)["human_score"]
