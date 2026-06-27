@@ -635,73 +635,6 @@ def _add_informal_openers(text: str, probability: float = 0.15) -> str:
     return " ".join(result)
 
 
-def _inject_typos(text: str, probability: float = 0.03) -> str:
-    """Add genuine human typos — LLMs never make typos, so this is a strong human signal."""
-    common_typos = {
-        "the": ["teh", "hte"],
-        "their": ["thier", "theri"],
-        "there": ["thre", "ther"],
-        "your": ["youre", "yoru"],
-        "you're": ["your", "youre"],
-        "its": ["ist", "it's"],
-        "it's": ["its", "ist"],
-        "about": ["abut", "abotu"],
-        "because": ["becuase", "becasue"],
-        "people": ["poeple", "peopel"],
-        "really": ["realy", "reallly"],
-        "just": ["juts", "jsut"],
-        "like": ["liek", "lkike"],
-        "what": ["wat", "whaat"],
-        "that": ["taht", "tht"],
-        "with": ["wiht", "wth"],
-        "have": ["hvae", "hav"],
-        "been": ["bn", "beem"],
-        "from": ["form", "frome"],
-        "were": ["wer", "we're"],
-        "would": ["woud", "wil"],
-        "could": ["culd", "cold"],
-        "should": ["shoud", "shoudl"],
-        "think": ["thik", "thnik"],
-        "know": ["konw", "kno"],
-        "going": ["goign", "goin"],
-        "thing": ["thng", "thign"],
-        "something": ["somethign", "someting"],
-        "nothing": ["nothign", "nothin"],
-        "everything": ["evreything", "everyting"],
-        "actually": ["actaully", "actualy"],
-        "basically": ["basiclly", "basicaly"],
-        "honestly": ["honsetly", "honestyl"],
-        "literally": ["litreally", "literaly"],
-        "definitely": ["definately", "definatly"],
-        "occasionally": ["occassionally", "occasionaly"],
-        "necessary": ["neccessary", "necessery"],
-        "separate": ["seperate", "seprate"],
-        "business": ["busness", "busines"],
-        "question": ["quesiton", "question"],
-        "different": ["diffrent", "differnt"],
-        "important": ["importnat", "importnt"],
-        "understand": ["understad", "undestand"],
-        "especially": ["especailly", "especialy"],
-        "remember": ["rember", "reember"],
-        "beautiful": ["beatiful", "beutiful"],
-        "government": ["goverment", "govment"],
-        "environment": ["enviroment", "envirnoment"],
-        "experience": ["experiance", "experince"],
-        "knowledge": ["knowlege", "knowledg"],
-        "education": ["educaion", "eduction"],
-        "information": ["infromation", "informaton"],
-    }
-
-    words = text.split()
-    for i in range(len(words)):
-        if random.random() < probability:
-            w = words[i].lower().rstrip(".,!?;:")
-            punct = words[i][len(w):] if len(words[i]) > len(w) else ""
-            if w in common_typos:
-                words[i] = random.choice(common_typos[w]) + punct
-    return " ".join(words)
-
-
 def _add_stream_of_consciousness(text: str, probability: float = 0.08) -> str:
     """Add stream-of-consciousness asides — things humans write that LLMs never do."""
     asides = [
@@ -811,7 +744,6 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.3,
             "grammar_break": 0.2,
             "informal_openers": 0.1,
-            "typos": 0.02,
             "stream": 0.05,
             "hedging": 0.08,
             "scramble_order": 0.1,
@@ -828,7 +760,6 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.4,
             "grammar_break": 0.3,
             "informal_openers": 0.15,
-            "typos": 0.03,
             "stream": 0.08,
             "hedging": 0.1,
             "scramble_order": 0.15,
@@ -845,7 +776,6 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.5,
             "grammar_break": 0.4,
             "informal_openers": 0.2,
-            "typos": 0.04,
             "stream": 0.12,
             "hedging": 0.15,
             "scramble_order": 0.2,
@@ -862,7 +792,6 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "local_synonyms": 0.6,
             "grammar_break": 0.5,
             "informal_openers": 0.25,
-            "typos": 0.05,
             "stream": 0.15,
             "hedging": 0.2,
             "scramble_order": 0.25,
@@ -891,7 +820,6 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
     text = _inject_function_words(text, probability=0.3)
 
     # GPTZero-specific: aggressive humanization passes
-    text = _inject_typos(text, probability=cfg.get("typos", 0.03))
     text = _add_stream_of_consciousness(text, probability=cfg.get("stream", 0.08))
     text = _add_hedging_and_uncertainty(text, probability=cfg.get("hedging", 0.1))
     text = _scramble_sentence_order(text, probability=cfg.get("scramble_order", 0.15))
