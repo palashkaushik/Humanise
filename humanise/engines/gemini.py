@@ -27,10 +27,18 @@ class GeminiEngine(BaseEngine):
         from google import genai
         client = genai.Client(api_key=self.api_key)
         try:
+            # Limit output to ~1.5x input length to prevent hallucination
+            input_tokens = len(text.split()) * 4
+            max_output = min(8192, max(512, int(input_tokens * 1.5)))
+            
             response = client.models.generate_content(
                 model=self.model,
                 contents=f"{prompt}\n\nRewrite this to sound human:\n\n{text}",
-                config={"temperature": temperature, "top_p": 0.95}
+                config={
+                    "temperature": temperature,
+                    "top_p": 0.95,
+                    "max_output_tokens": max_output,
+                }
             )
         except Exception as e:
             error_str = str(e)

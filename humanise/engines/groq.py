@@ -27,6 +27,10 @@ class GroqEngine(BaseEngine):
         from groq import Groq
         client = Groq(api_key=self.api_key)
         try:
+            # Limit output to ~1.5x input length to prevent hallucination
+            input_tokens = len(text.split()) * 4  # rough estimate: 1 word ≈ 1.3 tokens
+            max_tokens = min(4096, max(512, int(input_tokens * 1.5)))
+            
             response = client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -35,7 +39,7 @@ class GroqEngine(BaseEngine):
                 ],
                 temperature=temperature,
                 top_p=0.95,
-                max_tokens=4096,
+                max_tokens=max_tokens,
             )
             return EngineResult(
                 text=response.choices[0].message.content or "",

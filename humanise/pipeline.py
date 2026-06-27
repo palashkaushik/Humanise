@@ -1,4 +1,5 @@
 import time
+import re
 import random
 from typing import Optional, Sequence, Union
 from humanise.engines.base import BaseEngine, EngineResult
@@ -25,6 +26,115 @@ MULTI_MODEL_ROTATION = [
     "qwen/qwen3-32b",
     "llama-3.3-70b-versatile",
 ]
+
+
+def _check_coherence(text: str, original: str) -> str:
+    """Detect and fix LLM hallucination / word salad.
+    
+    When the LLM loses coherence, the output degrades into:
+    - Very short fragments (1-2 words)
+    - Nonsensical word combinations
+    - Repetitive filler patterns
+    - Loss of grammatical structure
+    
+    Returns the original text if the rewrite is incoherent.
+    Truncates at the last coherent sentence if degradation is detected.
+    """
+    if not text or not text.strip():
+        return original
+    
+    # Split into sentences
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text) if s.strip()]
+    
+    if len(sentences) < 2:
+        return original
+    
+    # Check for incoherence signals
+    issues = 0
+    
+    # 1. Too many very short fragments (1-3 words)
+    short_fragments = sum(1 for s in sentences if len(s.split()) <= 3)
+    if short_fragments > len(sentences) * 0.4:
+        issues += 1
+    
+    # 2. Sentences that are just filler words
+    filler_words = {'and', 'but', 'or', 'so', 'yet', 'also', 'just', 'still', 'now', 'then',
+                    'here', 'there', 'where', 'when', 'how', 'why', 'what', 'who', 'which',
+                    'that', 'this', 'these', 'those', 'it', 'he', 'she', 'they', 'we', 'you',
+                    'I', 'my', 'his', 'her', 'our', 'your', 'its', 'the', 'a', 'an', 'some',
+                    'any', 'all', 'no', 'not', 'never', 'always', 'maybe', 'perhaps', 'huh'}
+    filler_count = 0
+    for s in sentences:
+        words = s.lower().split()
+        if len(words) <= 2 and all(w.strip('.,!?;:') in filler_words for w in words):
+            filler_count += 1
+    
+    if filler_count > len(sentences) * 0.3:
+        issues += 1
+    
+    # 3. Check for repeated determiners/prepositions
+    nonsensical = 0
+    for s in sentences:
+        words = s.split()
+        if len(words) >= 3:
+            for i in range(len(words) - 1):
+                if words[i].lower() == words[i+1].lower() and words[i].lower() in {'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}:
+                    nonsensical += 1
+                    break
+    
+    if nonsensical > len(sentences) * 0.2:
+        issues += 1
+    
+    # 4. Check length ratio — if output is >2x input, it's likely hallucinating
+    orig_words = len(original.split())
+    new_words = len(text.split())
+    if new_words > orig_words * 2.0:
+        # Truncate to 1.5x input length at the last sentence boundary
+        target_words = int(orig_words * 1.5)
+        words_so_far = 0
+        for i, s in enumerate(sentences):
+            words_so_far += len(s.split())
+            if words_so_far >= target_words:
+                return ' '.join(sentences[:i+1])
+        return text
+    if new_words < orig_words * 0.5:
+        return original
+    
+    # 5. Check for lowercase sentence starts
+    fragment_count = sum(1 for i, s in enumerate(sentences) if i > 0 and s and s[0].islower())
+    if fragment_count > len(sentences) * 0.3:
+        issues += 1
+    
+    # 6. Detect late-stage degradation
+    third = len(sentences) // 3
+    if third >= 2:
+        first_third = sentences[:third]
+        last_third = sentences[-third:]
+        
+        first_short = sum(1 for s in first_third if len(s.split()) <= 3)
+        last_short = sum(1 for s in last_third if len(s.split()) <= 3)
+        
+        if last_short > first_short * 2 and last_short > len(last_third) * 0.4:
+            issues += 1
+    
+    # If issues detected, try to salvage by truncating at last good sentence
+    if issues >= 1:
+        # Walk backwards to find the last "good" sentence
+        for i in range(len(sentences) - 1, -1, -1):
+            s = sentences[i]
+            words = s.split()
+            # A good sentence: >= 4 words, starts with capital, not just filler
+            if (len(words) >= 4 and 
+                s[0].isupper() and
+                not all(w.strip('.,!?;:') in filler_words for w in words)):
+                truncated = ' '.join(sentences[:i+1])
+                # Only use truncation if we kept at least 60% of the text
+                if len(truncated.split()) >= orig_words * 0.6:
+                    return truncated
+        # If no good truncation found, return original
+        return original
+    
+    return text
 
 
 STRENGTH_CONFIG = {
@@ -278,6 +388,8 @@ class Humanise:
                     temperature=config["temperature"],
                 )
                 result = pass_result.text if pass_result.text.strip() else text
+                # Check for LLM hallucination / word salad
+                result = _check_coherence(result, text)
                 if pass_result.text.strip():
                     fingerprint.record(engine.name, "rewrite")
             except Exception:
@@ -379,6 +491,8 @@ class Humanise:
                     )
                     if pass_result.text.strip():
                         result = pass_result.text
+                        # Check for LLM hallucination / word salad
+                        result = _check_coherence(result, text)
                         fingerprint.record(engine.name, "rewrite")
                 except Exception:
                     pass
