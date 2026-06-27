@@ -126,23 +126,36 @@ async def key_usage(request: Request):
 
 @app.post("/api/humanize", response_model=HumaniseResponse)
 async def humanize(req: HumaniseRequest, request: Request):
-    _require_key(request)
     try:
+        _require_key(request)
         h = _get_humaniser()
         if req.feedback:
             result = h.humanize_with_feedback(req.text, strength=req.strength)
         else:
             result = h.humanize(req.text, strength=req.strength)
         return HumaniseResponse(text=result)
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={"text": "", "detail": f"Internal error: {str(e)[:200]}"},
+        )
 
 
 @app.post("/api/detect", response_model=DetectResponse)
 async def detect(req: DetectRequest, request: Request):
-    _require_key(request)
-    analysis = detect_patterns(req.text)
-    return DetectResponse(**analysis)
+    try:
+        _require_key(request)
+        analysis = detect_patterns(req.text)
+        return DetectResponse(**analysis)
+    except HTTPException:
+        raise
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"total_score": 0, "matches": {}, "pattern_count": 0, "sentence_uniformity": 0, "concerns": [f"Error: {str(e)[:200]}"]},
+        )
 
 
 @app.post("/api/rules", response_model=RulesResponse)
