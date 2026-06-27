@@ -19,9 +19,9 @@ from humanise.prompts.templates import (
 
 
 MULTI_MODEL_ROTATION = [
-    "llama-3.3-70b-versatile",
-    "qwen/qwen3-32b",
     "openai/gpt-oss-20b",
+    "qwen/qwen3-32b",
+    "llama-3.3-70b-versatile",
 ]
 
 
@@ -276,7 +276,7 @@ class Humanise:
         engine_actually_changed = False
         for i in range(passes):
             # Slightly increase temperature with each pass for more diversity
-            pass_temp = min(1.4, temperature + (i * 0.05))
+            pass_temp = min(1.8, temperature + (i * 0.1))
             new_result = self._rewrite_pass(result, pass_temp, i, passes, fingerprint)
 
             if new_result != result:
@@ -395,7 +395,7 @@ class Humanise:
 
         for i in range(max_iter):
             # Use a different temperature for each iteration (gradually increase)
-            iteration_temp = min(1.4, config["temperature"] + (i * 0.05))
+            iteration_temp = min(1.8, config["temperature"] + (i * 0.1))
 
             # Multi-pass rewrite with engine rotation
             for p in range(config["passes"]):
@@ -451,7 +451,7 @@ class Humanise:
                         fb_result = engine.rewrite_with_prompt(
                             result,
                             prompt=feedback_prompt,
-                            temperature=min(1.5, iteration_temp + 0.1),
+                            temperature=min(2.0, iteration_temp + 0.2),
                         )
                         if fb_result and fb_result.text.strip():
                             result = fb_result.text

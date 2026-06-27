@@ -30,7 +30,7 @@ class GeminiEngine(BaseEngine):
             response = client.models.generate_content(
                 model=self.model,
                 contents=f"{prompt}\n\nRewrite this to sound human:\n\n{text}",
-                config={"temperature": temperature}
+                config={"temperature": temperature, "top_p": 0.95}
             )
         except Exception as e:
             error_str = str(e)

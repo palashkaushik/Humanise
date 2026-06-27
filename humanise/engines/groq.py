@@ -34,6 +34,7 @@ class GroqEngine(BaseEngine):
                     {"role": "user", "content": f"Rewrite this differently:\n\n{text}"}
                 ],
                 temperature=temperature,
+                top_p=0.95,
                 max_tokens=4096,
             )
             return EngineResult(

@@ -135,7 +135,6 @@ AI_VOCABULARY_SWAPS = {
     r"\blacks?\b": "missing",
     # GPTZero: Lacks Creative Grammar — break perfect structure
     r"\bThe\s+grammatical\s+structure\s+is\s+correct\b": "The grammar works",
-}
     # GPTZero-flagged: purple prose / overly dramatic vocabulary
     r"\btenebrous\b": "dark",
     r"\bpronouncement\b": "voice",
