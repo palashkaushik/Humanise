@@ -178,20 +178,59 @@ async def health():
     engines_status = []
     for engine in h.engines:
         status = {"name": engine.name, "available": engine.available()}
+        
         if engine.name == "groq":
             try:
                 from groq import Groq
                 client = Groq(api_key=engine.api_key)
                 client.models.list()
                 status["healthy"] = True
+                status["tier"] = "free"
+                status["note"] = "30 req/min"
             except Exception as e:
                 if "429" in str(e) or "rate_limit" in str(e).lower():
                     status["healthy"] = False
                     status["error"] = "rate_limited"
+                    status["note"] = "30 req/min — retry in 60s"
                 else:
                     status["healthy"] = False
                     status["error"] = str(e)[:100]
+        
+        elif engine.name == "gemini":
+            try:
+                from google import genai
+                client = genai.Client(api_key=engine.api_key)
+                client.models.generate_content(
+                    model=engine.model,
+                    contents="ping",
+                    config={"max_output_tokens": 5}
+                )
+                status["healthy"] = True
+                status["tier"] = "free"
+                status["note"] = "1,500 req/day"
+            except Exception as e:
+                if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e) or "quota" in str(e).lower():
+                    status["healthy"] = False
+                    status["error"] = "quota_exceeded"
+                    status["note"] = "1,500 req/day — quota hit"
+                else:
+                    status["healthy"] = False
+                    status["error"] = str(e)[:100]
+        
+        elif engine.name == "ollama":
+            try:
+                import httpx
+                r = httpx.get("http://localhost:11434/api/tags", timeout=3)
+                status["healthy"] = r.status_code == 200
+                status["tier"] = "local"
+                status["note"] = "Unlimited (local)"
+            except Exception:
+                status["healthy"] = False
+                status["error"] = "offline"
+                status["note"] = "Not running locally"
+        
         engines_status.append(status)
+    
     return {
         "status": "ok",
         "version": "0.2.0",

@@ -101,25 +101,32 @@ function getHeaders() {
 
 // Engine status
 async function loadEngineStatus() {
+  const el = document.getElementById('engineStatus');
   try {
     const r = await fetch(`${API}/api/health`);
     const d = await r.json();
-    const el = document.getElementById('engineStatus');
     if (!el || !d.engines?.length) {
       if (el) el.innerHTML = '<span class="text-zinc-600">No engines configured</span>';
       return;
     }
     el.innerHTML = d.engines.map(e => {
-      const color = e.healthy ? 'text-emerald-400' : 'text-red-400';
-      const label = e.healthy ? e.name : `${e.name} (rate limited)`;
-      return `<span class="${color}">● ${label}</span>`;
+      const dot = e.healthy ? 'bg-emerald-400' : 'bg-red-400';
+      const label = e.healthy ? e.name : `${e.name} (depleted)`;
+      const note = e.note ? ` — ${e.note}` : '';
+      const tier = e.tier ? ` [${e.tier}]` : '';
+      return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-zinc-800/50 border border-zinc-700">
+        <span class="w-2 h-2 rounded-full ${dot}"></span>
+        <span class="text-zinc-300 font-medium">${label}</span>
+        <span class="text-zinc-500">${tier}${note}</span>
+      </span>`;
     }).join('');
   } catch {
-    const el = document.getElementById('engineStatus');
     if (el) el.innerHTML = '<span class="text-zinc-600">Status unavailable</span>';
   }
 }
 loadEngineStatus();
+// Refresh status every 60 seconds
+setInterval(loadEngineStatus, 60000);
 
 // Tab switching
 document.querySelectorAll('.tab-btn').forEach(btn => {
