@@ -303,6 +303,30 @@ def _inject_function_words(text: str, probability: float = 0.3) -> str:
 
 _LOCAL_SYNONYMS = {
     "important": "key",
+    "prioritizes": "leans toward",
+    "clarify": "spell out",
+    "specificity": "the details",
+    "nuanced": "tricky",
+    "convey": "get across",
+    "sophistication": "fancy-sounding",
+    "detailed": "thorough",
+    "technical": "tech",
+    "advanced": "fancy",
+    "precise": "exact",
+    "imperative": "needed",
+    "essential": "must-have",
+    "critical": "key",
+    "substantive": "real",
+    "meticulous": "careful",
+    "elaborate": "go into",
+    "synthesize": "pull together",
+    "pragmatic": "practical",
+    "utilitarian": "useful",
+    "facilitate": "help",
+    "elucidate": "explain",
+    "commensurate": "on par with",
+    "spontaneity": "life",
+    "emotional depth": "feeling",
     "significant": "real",
     "good": "solid",
     "bad": "rough",
@@ -555,6 +579,62 @@ def _strip_conclusions(text: str) -> str:
     return text.strip()
 
 
+def _break_perfect_grammar(text: str, probability: float = 0.3) -> str:
+    """Break AI's grammatically perfect text by starting sentences with conjunctions
+    and adding fragments. GPTZero flags text that 'lacks creative deviations.'"""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    if len(sentences) < 4:
+        return text
+
+    result = []
+    for i, s in enumerate(sentences):
+        words = s.split()
+        if len(words) < 3:
+            result.append(s)
+            continue
+
+        if random.random() < probability and i > 0:
+            # Start with a conjunction
+            conj = random.choice(["And ", "But ", "So ", "Yet ", "Still "])
+            result.append(f"{conj}{s[0].lower()}{s[1:]}")
+        elif random.random() < probability * 0.5 and len(words) > 10:
+            # Break into a fragment + full sentence
+            mid = len(words) // 2
+            frag = " ".join(words[:mid]).rstrip(",;") + "."
+            rest = " ".join(words[mid:])
+            if rest and rest[0].islower():
+                rest = rest[0].upper() + rest[1:]
+            result.append(frag)
+            result.append(rest)
+        else:
+            result.append(s)
+
+    return " ".join(result)
+
+
+def _add_informal_openers(text: str, probability: float = 0.15) -> str:
+    """Add informal sentence openers to break the 'too precise' pattern."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    if len(sentences) < 5:
+        return text
+
+    openers = [
+        "Honestly, ", "Look, ", "Thing is, ", "Mind you, ",
+        "Turns out, ", "Weirdly, ", "Surprisingly, ", "Oddly, ",
+        "To be fair, ", "In fairness, ", "Funny thing is, ",
+    ]
+
+    result = []
+    for i, s in enumerate(sentences):
+        if random.random() < probability and i > 0 and not s.startswith(("I ", "He ", "She ", "It ", "The ", "A ")):
+            opener = random.choice(openers)
+            result.append(f"{opener}{s[0].lower()}{s[1:]}")
+        else:
+            result.append(s)
+
+    return " ".join(result)
+
+
 def humanize_rules(text: str, strength: str = "medium") -> str:
     config = {
         "light": {
@@ -567,6 +647,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "logic_reorder": 0.1,
             "force_fragment": 0.3,
             "local_synonyms": 0.3,
+            "grammar_break": 0.2,
+            "informal_openers": 0.1,
         },
         "medium": {
             "conciseness": True,
@@ -578,6 +660,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "logic_reorder": 0.2,
             "force_fragment": 0.5,
             "local_synonyms": 0.4,
+            "grammar_break": 0.3,
+            "informal_openers": 0.15,
         },
         "aggressive": {
             "conciseness": True,
@@ -589,6 +673,8 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "logic_reorder": 0.3,
             "force_fragment": 0.7,
             "local_synonyms": 0.5,
+            "grammar_break": 0.4,
+            "informal_openers": 0.2,
         },
         "ninja": {
             "conciseness": True,
@@ -600,9 +686,15 @@ def humanize_rules(text: str, strength: str = "medium") -> str:
             "logic_reorder": 0.4,
             "force_fragment": 0.85,
             "local_synonyms": 0.6,
+            "grammar_break": 0.5,
+            "informal_openers": 0.25,
         },
     }
     cfg = config.get(strength, config["medium"])
+
+    # GPTZero: break perfect grammar first
+    text = _break_perfect_grammar(text, probability=cfg.get("grammar_break", 0.3))
+    text = _add_informal_openers(text, probability=cfg.get("informal_openers", 0.15))
 
     if cfg["strip_conclusions"]:
         text = _strip_conclusions(text)

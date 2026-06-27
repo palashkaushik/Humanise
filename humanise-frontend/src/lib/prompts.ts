@@ -28,6 +28,13 @@ PRINCIPLES — apply these with judgement, not as a checklist:
    - Some paragraphs: one sentence. Others: five sentences. Don't count — feel it
    - Don't end every paragraph with a neat bow — let some thoughts hang
    - Questions, fragments, asides — use them when they serve the rhythm, not as punctuation
+   - BREAK GRAMMAR: Start sentences with "And" or "But." Use sentence fragments. Let thoughts be incomplete.
+   - WRITE IMPERFECTLY: Real humans don't write grammatically perfect text all the time
+   - AVOID "PRIORITIZES CLARITY" — be vague sometimes, trail off, contradict yourself
+   - Include reactions, opinions, frustrations, excitement — not just information
+   - Sound bored or excited or annoyed — just don't sound neutral and informative
+   - Skip formal words: prioritize, clarify, specificity, nuanced, convey, sophistication
+   - Instead: lean toward, spell out, the details, tricky, get across, fancy-sounding
 
 5. ABSOLUTELY NOTHING THAT SMELLS LIKE A PROMPT:
    - Don't sprinkle in "honestly" or "right?" or "you know?" because you were told to sound casual

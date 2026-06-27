@@ -72,6 +72,17 @@ OUTPUT RULES:
 - Length should be within 80-120% of the original
 - CRITICAL: Average sentence length MUST be under 22 words
 
+STYLE RULES (GPTZero flags these):
+- WRITE IMPERFECTLY: Use fragments, run-ons, sentence fragments. Real humans don't write grammatically perfect text.
+- BE CASUAL: Use "kind of," "sort of," "a lot," "weird," "big deal," "no way" instead of formal equivalents
+- AVOID PRECISION: Don't "prioritize clarity" — be vague sometimes, trail off, contradict yourself
+- BREAK GRAMMAR: Start sentences with "And" or "But." Use sentence fragments. Let thoughts be incomplete.
+- ADD EMOTION: Include reactions, opinions, frustrations, excitement — not just information
+- USE SPECIFICS: A brand name, a price, a year, a weird detail. Not abstract concepts.
+- SOUND BORED OR EXCITED OR ANNOYED — just don't sound neutral and informative
+- Avoid: "prioritizes," "clarify," "specificity," "nuanced," "convey," "sophistication"
+- Instead say: "leans toward," "spell out," "the details," "tricky," "get across," "fancy-sounding"
+
 Rewrite this text:
 
 """
