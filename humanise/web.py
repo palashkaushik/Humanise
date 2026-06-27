@@ -20,6 +20,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "internal_error", "message": str(exc)[:300]},
+    )
+
 api_keys.init()
 
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
