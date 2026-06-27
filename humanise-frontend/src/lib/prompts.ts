@@ -9,6 +9,10 @@ PRINCIPLES — apply these with judgement, not as a checklist:
 
 2. AUTHENTIC WORD CHOICES:
    - Skip words that only appear in marketing decks and essays: furthermore, moreover, consequently, innovative, cutting-edge, groundbreaking, transformative, comprehensive, unprecedented, robust, seamless, synergy, paradigm, multifaceted, leverage, utilize, facilitate, optimize, streamline, implement, navigate, embark, underscore, highlight, showcase, illustrate, demonstrate, delve, foster, cultivate, empower
+   - Skip purple-prose words detectors flag instantly: tenebrous, ethereal, unearthly, celestial, guttural, pronouncement, cosmic, celestial realms
+   - Skip body-reaction cliches detectors flag: gut clenched, pulse quickened, breath caught, spine tingled, skin crawled, hair stood on end
+   - Skip stilted formal patterns: "akin to," "the very fate of," "did not make a peep," "remained fixed on," "boomed from," "proclaimed," "uttered"
+   - Just use "said" for dialogue tags — never "declared," "proclaimed," "intoned," "uttered"
    - Pick words a person actually says when they're not being paid to sound smart
    - Technical or formal words are fine when earned — just don't decorate with them
 

@@ -101,6 +101,37 @@ AI_VOCABULARY_SWAPS = {
     r"\bmyriad\b": "many",
     r"\bpivotal\b": "key",
     r"\bcomprehensive\b": "full",
+    # GPTZero-flagged: purple prose / overly dramatic vocabulary
+    r"\btenebrous\b": "dark",
+    r"\bpronouncement\b": "voice",
+    r"\bguttural\b": "rough",
+    r"\bunearthly\b": "strange",
+    r"\bethereal\b": "faint",
+    r"\bcelestial\b": "sky",
+    r"\bcosmic\b": "huge",
+    r"\bbottomless\s+chasm\b": "deep drop",
+    r"\bfate\s+of\s+the\s+cosmos\b": "everything on the line",
+    r"\bhanging\s+on\s+it\b": "at stake",
+    r"\bthe\s+very\s+fate\b": "everything",
+    r"\bakin\s+to\b": "like",
+    r"\bakin\s+to\s+peering\s+into\b": "like staring into",
+    # GPTZero-flagged: formulaic body reactions
+    r"\bgut\s+clenched\b": "felt sick",
+    r"\bspine\s+(tingled|chilled)\b": "got chills",
+    r"\bskin\s+(crawled|prickled)\b": "got goosebumps",
+    r"\bbreath\s+caught\s+in\s+(his|her|their)\s+throat\b": "choked up",
+    r"\bhair\s+stood\s+on\s+end\b": "freaked out",
+    # GPTZero-flagged: stilted dialogue tags
+    r"\bboomed\s+from\b": "came from",
+    r"\bproclaimed\b": "said",
+    r"\bpronounced\b": "said",
+    r"\buttered\b": "said",
+    r"\bintoned\b": "said",
+    r"\bmurmured\b": "muttered",
+    # GPTZero-flagged: "make a peep" / stilted negation
+    r"\bdid\s+not\s+make\s+a\s+peep\b": "didn't say a word",
+    r"\bremained\s+fixed\s+on\b": "stared at",
+    r"\bremained\s+utterly\b": "was completely",
 }
 
 CONTRACTION_PATTERNS = {

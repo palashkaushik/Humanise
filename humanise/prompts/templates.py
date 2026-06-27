@@ -46,15 +46,23 @@ DETECTORS USE THESE STATISTICAL SIGNALS. You must disrupt ALL of them:
    - Use colloquialisms: "kind of," "sort of," "a lot," "big deal," "no way"
 
 8. BANNED PATTERNS (instant detection):
-   - "eyes sparkled/narrowed/flashed/lit up," "smile faltered," "heart pounded/raced"
-   - "melodious voice," "captivated by," "filled the air," "beacon of hope"
-   - "tapestry of," "dance of chaos," "drowning in her eyes"
-   - "As they walked/talked/worked..." "For a moment..." "Suddenly..."
-   - "she said, her voice [trembling/breaking/barely above a whisper]"
-   - "plays a crucial/key/vital role"
-   - "it is important to note that"
-   - "innovative," "groundbreaking," "cutting-edge," "synergy," "paradigm"
-   - "delve into," "landscape," "multifaceted"
+    - "eyes sparkled/narrowed/flashed/lit up," "smile faltered," "heart pounded/raced"
+    - "melodious voice," "captivated by," "filled the air," "beacon of hope"
+    - "tapestry of," "dance of chaos," "drowning in her eyes"
+    - "As they walked/talked/worked..." "For a moment..." "Suddenly..."
+    - "she said, her voice [trembling/breaking/barely above a whisper]"
+    - "plays a crucial/key/vital role"
+    - "it is important to note that"
+    - "innovative," "groundbreaking," "cutting-edge," "synergy," "paradigm"
+    - "delve into," "landscape," "multifaceted"
+    - "gut clenched," "pulse quickened," "breath caught," "spine tingled," "skin crawled" — detectors flag ALL body-reaction cliches
+    - "akin to," "as though peering into," "the very fate of" — stilted formal comparison patterns
+    - "tenebrous," "guttural," "pronouncement," "ethereal," "unearthly," "celestial" — purple prose vocabulary
+    - "boomed from," "declared," "proclaimed," "uttered" — dramatic dialogue tags; just use "said"
+    - "did not make a peep" — stilted negation; use "didn't say a word" or "stayed quiet"
+    - "remained fixed on," "remained utterly" — formal phrasing; use "stared at," "was completely"
+    - "kind of [adj] [verb]" — AI uses this pattern; break it up
+    - ANY sentence that sounds like an epic fantasy novel narration — write like a normal person, not a poet
 
 OUTPUT RULES:
 - Return ONLY the rewritten text. No explanations, no headers, no meta-commentary.

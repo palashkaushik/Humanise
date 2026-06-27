@@ -43,6 +43,19 @@ SYNONYM_DB = {
     "remarkable": ["notable", "impressive", "striking", "hard to ignore", "standout"],
     "extraordinary": ["unusual", "rare", "out of the ordinary", "something else", "wild"],
     "substantial": ["large", "big", "decent", "real", "significant", "no small amount"],
+    # GPTZero-flagged: purple prose vocabulary
+    "tenebrous": ["dark", "shadowy", "dim", "gloomy"],
+    "ethereal": ["faint", "delicate", "light", "soft"],
+    "unearthly": ["strange", "odd", "weird", "eerie"],
+    "guttural": ["rough", "harsh", "gravelly", "raspy"],
+    "pronouncement": ["voice", "words", "statement"],
+    "celestial": ["sky", "starry", "heavenly"],
+    "cosmic": ["huge", "massive", "enormous", "universal"],
+    # GPTZero-flagged: body reaction cliches
+    "clenched": ["tight", "gripped", "curled", "balled"],
+    "quickened": ["sped up", "got faster", "raced"],
+    "tingled": ["prickled", "went numb", "buzzed"],
+    "crawled": ["crept", "moved", "shifted"],
 }
 
 DELETABLE_PHRASES = [

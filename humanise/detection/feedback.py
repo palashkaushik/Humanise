@@ -75,6 +75,18 @@ AI_PATTERNS = {
     "vague_attribution": r"\b(industry\s+reports|observers\s+have\s+cited|experts?\s+argue|some\s+critics?\s+argue|several\s+sources|several\s+publications)\b",
     # Outline-like conclusions
     "outline_conclusion": r"\b(despite\s+its.*faces\s+several\s+challenges|despite\s+these\s+challenges|challenges\s+and\s+legacy|future\s+outlook|challenges\s+and\s+future\s+directions)\b",
+    # GPTZero-flagged: overly dramatic/purple prose
+    "purple_prose": r"\b(tenebrous|pronouncement|guttural|boomed\s+from|fate\s+of\s+the\s+cosmos|hanging\s+on\s+it|bottomless\s+chasm|unearthly|ethereal|celestial|celestial\s+realms?|astral\s+plane|cosmic)\b",
+    # GPTZero-flagged: formulaic body-reaction descriptions
+    "formulaic_body_reaction": r"\b(gut\s+clenched|heart\s+(pounded|raced|skipped|sank|swelled|soared|hammered|thudded)|chest\s+tightened|pulse\s+(quickened|raced)|blood\s+(ran\s+cold|boiled|chilled)|stomach\s+(dropped|churned|tightened)|spine\s+(tingled|chilled)|skin\s+(crawled|prickled|goosebumped)|hair\s+(stood|stood\s+on\s+end|prickled)|breath\s+(caught|caught\s+in\s+throat))\b",
+    # GPTZero-flagged: stilted/formal dialogue tags
+    "stilted_dialogue_tag": r"\b(boomed|proclaimed|declared|pronounced|uttered|murmured|intoned|intoned)\s+(from|in|with|through)\b",
+    # GPTZero-flagged: overuse of "akin to" / "as if" comparisons
+    "overused_comparison": r"\b(akin\s+to|as\s+if\s+peering|as\s+though|like\s+peering|as\s+though\s+looking)\b",
+    # GPTZero-flagged: "the very" intensifier
+    "the_very_intensifier": r"\bthe\s+very\s+(fate|essence|nature|core|heart|soul|fabric|foundation|backbone|cornerstone)\b",
+    # GPTZero-flagged: "kind of" + adjective + noun pattern
+    "kind_of_adj_noun": r"\bkind\s+of\s+\w+\s+(billowed|floated|clung|lingered)\b",
 }
 
 CONVERSATIONAL_AI_PATTERNS = {
